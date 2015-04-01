@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using ColossalFramework;
 using ColossalFramework.Packaging;
-using ColossalFramework.Plugins;
 using ColossalFramework.UI;
 using UnityEngine;
 
@@ -17,11 +15,13 @@ namespace ImprovedAssetsPanel
         {
             Alphabetical = 0,
             LastUpdated = 1,
-            LastSubscribed = 2
+            LastSubscribed = 2,
+            Active = 3
         }
 
         private enum AssetType
         {
+            All,
             Building,
             Residential,
             Commercial,
@@ -49,7 +49,6 @@ namespace ImprovedAssetsPanel
             Monument,
             Unknown,
             ColorLUT,
-            All
         }
 
         private static bool bootstrapped;
@@ -238,19 +237,12 @@ namespace ImprovedAssetsPanel
             panel.transform.parent = moarGroup.transform;
             panel.size = new Vector2(600.0f, 32.0f);
 
-            var assetTypeLabel = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
-            assetTypeLabel.text = String.Format("Filter: {0}", filterMode.ToString());
-            assetTypeLabel.transform.parent = panel.transform;
-            assetTypeLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
-            assetTypeLabel.relativePosition = new Vector3(-16.0f, 10.0f, assetTypeLabel.relativePosition.z);
-            assetTypeLabel.textScale = 0.75f;
-
             var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
 
-            float x = 120.0f;
+            float x = 0.0f;
             foreach (var assetType in assetTypes)
             {
-                if (assetType == AssetType.All || assetType == AssetType.Unknown)
+                if (assetType == AssetType.Unknown)
                 {
                     continue;
                 }
@@ -258,13 +250,18 @@ namespace ImprovedAssetsPanel
                 var button = uiView.AddUIComponent(typeof(UIButton)) as UIButton;
                 button.size = new Vector2(32.0f, 32.0f);
 
-                if (assetType != AssetType.ColorLUT)
+                if (assetType != AssetType.ColorLUT && assetType != AssetType.All)
                 {
                     button.normalFgSprite = GetSpriteNameForAssetType(assetType);
                 }
-                else
+                else if(assetType == AssetType.ColorLUT)
                 {
+                    
                     button.text = "LUT";
+                }
+                else if (assetType == AssetType.All)
+                {
+                    button.text = "ALL";
                 }
 
                 button.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
@@ -298,24 +295,16 @@ namespace ImprovedAssetsPanel
                 button.pressedColor = button.color;
 
                 button.opacity = 0.25f;
+                if (assetType == AssetType.All)
+                {
+                    button.opacity = 1.0f;
+                }
 
                 var assetTypeCopy = assetType;
  
                 button.eventClick += (component, param) =>
                 {
-                    if (filterMode == assetTypeCopy)
-                    {
-                        
-                        filterMode = AssetType.All;
-                        ScrollAssetsList(0.0f);
-                        assetTypeLabel.text = String.Format("Filter: {0}", filterMode.ToString());
-                        button.opacity = 0.25f;
-                        RefreshOnlyAssetsList();
-                        return;
-                    }
-
                     filterMode = assetType;
-                    assetTypeLabel.text = String.Format("Filter: {0}", filterMode.ToString());
 
                     foreach (var item in assetTypeButtons)
                     {
@@ -368,6 +357,8 @@ namespace ImprovedAssetsPanel
                     return "Last subscribed";
                 case SortMode.LastUpdated:
                     return "Last updated";
+                case SortMode.Active:
+                    return "Active";
             }
 
             return "Unknown";
@@ -710,6 +701,20 @@ namespace ImprovedAssetsPanel
             else if (sortMode == SortMode.LastSubscribed)
             {
                 _cachedAssets.Sort((a, b) => GetAssetCreatedDelta(a).CompareTo(GetAssetCreatedDelta(b)));
+            }
+            else if (sortMode == SortMode.Active)
+            {
+                var active = new List<Package.Asset>();
+                var inactive = new List<Package.Asset>();
+                foreach (var asset in _cachedAssets)
+                {
+                    if(asset.isEnabled) active.Add(asset);
+                    else inactive.Add(asset);
+                }
+
+                _cachedAssets.Clear();
+                foreach (var asset in active) _cachedAssets.Add(asset);
+                foreach (var asset in inactive) _cachedAssets.Add(asset);
             }
         }
 
