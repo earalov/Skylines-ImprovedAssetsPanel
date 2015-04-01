@@ -16,11 +16,13 @@ namespace ImprovedAssetsPanel
             Alphabetical = 0,
             LastUpdated = 1,
             LastSubscribed = 2,
-            Active = 3
+            Active = 3,
+            Favorite = 4,
         }
 
         private enum AssetType
         {
+            Favorite,
             All,
             Building,
             Residential,
@@ -51,6 +53,27 @@ namespace ImprovedAssetsPanel
             ColorLUT,
         }
 
+        private static readonly string configPath = "ImprovedAssetsPanelConfig.xml";
+        private static Configuration config = new Configuration();
+
+        private static void LoadConfig()
+        {
+            config = Configuration.Deserialize(configPath);
+            if (config == null)
+            {
+                config = new Configuration();
+                SaveConfig();
+            }
+        }
+
+        private static void SaveConfig()
+        {
+            if (config != null)
+            {
+                Configuration.Serialize(configPath, config);
+            }
+        }
+
         private static bool bootstrapped;
 
         private static UIPanel sortDropDown;
@@ -66,6 +89,8 @@ namespace ImprovedAssetsPanel
         {
             switch (assetType)
             {
+                case AssetType.Favorite:
+                    return "InfoIconHealth";
                 case AssetType.Building:
                     return "BuildingIcon";
                 case AssetType.Prop:
@@ -129,6 +154,8 @@ namespace ImprovedAssetsPanel
         {
             try
             {
+                LoadConfig();
+
                 InitializeAssetSortDropDown();
 
                 if (bootstrapped)
@@ -256,7 +283,6 @@ namespace ImprovedAssetsPanel
                 }
                 else if(assetType == AssetType.ColorLUT)
                 {
-                    
                     button.text = "LUT";
                 }
                 else if (assetType == AssetType.All)
@@ -359,6 +385,8 @@ namespace ImprovedAssetsPanel
                     return "Last updated";
                 case SortMode.Active:
                     return "Active";
+                case SortMode.Favorite:
+                    return "Favorite";
             }
 
             return "Unknown";
@@ -669,6 +697,10 @@ namespace ImprovedAssetsPanel
             {
                 _cachedAssets = assets;
             }
+            else if (filterMode == AssetType.Favorite)
+            {
+                _cachedAssets = assets.FindAll(asset => config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64));
+            }
             else
             {
                 _cachedAssets = assets.FindAll(asset => GetAssetType(asset) == filterMode);
@@ -715,6 +747,20 @@ namespace ImprovedAssetsPanel
                 _cachedAssets.Clear();
                 foreach (var asset in active) _cachedAssets.Add(asset);
                 foreach (var asset in inactive) _cachedAssets.Add(asset);
+            }
+            else if (sortMode == SortMode.Favorite)
+            {
+                var favorite = new List<Package.Asset>();
+                var nonfavorite = new List<Package.Asset>();
+                foreach (var asset in _cachedAssets)
+                {
+                    if (config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64)) favorite.Add(asset);
+                    else nonfavorite.Add(asset);
+                }
+
+                _cachedAssets.Clear();
+                foreach (var asset in favorite) _cachedAssets.Add(asset);
+                foreach (var asset in nonfavorite) _cachedAssets.Add(asset);
             }
         }
 
@@ -798,19 +844,54 @@ namespace ImprovedAssetsPanel
 
                 var active = panel.Find<UICheckBox>("Active");
                 nameLabel.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
-                active.relativePosition = new Vector3(310.0f, 200.0f, active.relativePosition.z);
+                active.relativePosition = new Vector3(370.0f, 200.0f, active.relativePosition.z);
                 active.zOrder = 2;
 
+                var favButton = panel.AddUIComponent<UIButton>();
+                favButton.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
+                favButton.normalFgSprite = "InfoIconHealth";
+                favButton.size = new Vector2(36.0f, 36.0f);
+                favButton.relativePosition = new Vector3(362.0f, 164.0f);
+                favButton.opacity = config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64) ? 1.0f : 0.5f;
+
+                favButton.eventClick += (uiComponent, param) =>
+                {
+                    if (config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
+                    {
+                        config.favoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
+                        favButton.opacity = 0.5f;
+                    }
+                    else
+                    {
+                        config.favoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
+                        favButton.opacity = 1.0f;
+                    }
+
+                    SaveConfig();
+                };
+
                 var onOff = active.Find<UILabel>("OnOff");
-                onOff.textColor = Color.black;
+                onOff.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
+                onOff.textColor = Color.white;
+                onOff.textScale = 0.75f;
+                onOff.text = "Active";
+                onOff.relativePosition = new Vector3(-34.0f, 5.0f, onOff.relativePosition.z);
 
                 var view = panel.Find<UIButton>("View");
                 view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
                 view.zOrder = 2;
-                view.size = new Vector2(view.size.x, 24.0f);
+                view.size = new Vector2(32.0f, 32.0f);
                 view.textScale = 0.7f;
-                view.relativePosition = new Vector3(4.0f, 198.0f, view.relativePosition.z);
-                view.text = "WORKSHOP";
+                view.relativePosition = new Vector3(4.0f, 192.0f, view.relativePosition.z);
+                view.text = "";
+                view.normalFgSprite = "Options";
+                view.normalBgSprite = "";
+                view.hoveredFgSprite = "OptionsHovered";
+                view.hoveredBgSprite = "";
+                view.focusedFgSprite = "OptionsFocused";
+                view.focusedBgSprite = "";
+                view.pressedFgSprite = "OptionsPressed";
+                view.pressedBgSprite = "";
 
                 var share = panel.Find<UIButton>("Share");
                 share.zOrder = 2;
