@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -19,15 +20,108 @@ namespace ImprovedAssetsPanel
             LastSubscribed = 2
         }
 
+        private enum AssetType
+        {
+            Building,
+            Residential,
+            Commercial,
+            Industrial,
+            Office, 
+            Prop,
+            Tree,
+            Intersection,
+            Park,
+            Electricity,
+            WaterAndSewage,
+            Garbage,
+            Healthcare,
+            Deathcare,
+            FireDepartment,
+            PoliceDepartment,
+            Education,
+            Transport,
+            TransportBus,
+            TransportMetro,
+            TransportTrain,
+            TransportShip,
+            TransportPlane,
+            UniqueBuilding,
+            Monument,
+            Unknown,
+            All
+        }
+
         private static bool bootstrapped;
 
         private static UIPanel sortDropDown;
         private static SortMode sortMode = SortMode.Alphabetical;
+        private static AssetType filterMode = AssetType.All;
 
         private static readonly string kEntryTemplate = "EntryTemplate";
         private static readonly string kMapEntryTemplate = "MapEntryTemplate";
         private static readonly string kSaveEntryTemplate = "SaveEntryTemplate";
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
+
+        private static string GetSpriteNameForAssetType(AssetType assetType)
+        {
+            switch (assetType)
+            {
+                case AssetType.Building:
+                    return "BuildingIcon";
+                case AssetType.Prop:
+                    return "IconAssetProp";
+                case AssetType.Tree:
+                    return "IconPolicyForest";
+                case AssetType.Intersection:
+                    return "SubBarRoadsIntersection";
+                case AssetType.Park:
+                    return "SubBarBeautificationParksnPlazas";
+                case AssetType.Electricity:
+                    return "ToolbarIconElectricity";
+                case AssetType.WaterAndSewage:
+                    return "InfoIconWater";
+                case AssetType.Garbage:
+                    return "InfoIconGarbage";
+                case AssetType.Healthcare:
+                    return "ToolbarIconHealthcare";
+                case AssetType.Deathcare:
+                    return "ToolbarIconHealthcareDisabled";
+                case AssetType.FireDepartment:
+                    return "ToolbarIconFireDepartment";
+                case AssetType.PoliceDepartment:
+                    return "ToolbarIconPolice";
+                case AssetType.Education:
+                    return "ToolbarIconEducation";
+                case AssetType.Transport:
+                    return "IconPolicyFreePublicTransport";
+                case AssetType.TransportBus:
+                    return "SubBarPublicTransportBus";
+                case AssetType.TransportMetro:
+                    return "SubBarPublicTransportMetro";
+                case AssetType.TransportTrain:
+                    return "SubBarPublicTransportTrain";
+                case AssetType.TransportShip:
+                    return "SubBarPublicTransportShip";
+                case AssetType.TransportPlane:
+                    return "SubBarPublicTransportPlane";
+                case AssetType.UniqueBuilding:
+                    return "InfoIconLevelFocused";
+                case AssetType.Monument:
+                    return "FeatureMonumentLevel2";
+                case AssetType.Residential:
+                    return "BuildingIcon";
+                case AssetType.Commercial:
+                    return "BuildingIcon";
+                case AssetType.Industrial:
+                    return "BuildingIcon";
+                case AssetType.Office:
+                    return "BuildingIcon";
+                case AssetType.Unknown:
+                    return "BuildingIcon";
+            }
+
+            return "";
+        }
 
         public static void Bootstrap()
         {
@@ -72,6 +166,8 @@ namespace ImprovedAssetsPanel
 
             bootstrapped = false;
         }
+
+        private static List<UIButton> assetTypeButtons = new List<UIButton>(); 
 
         private static void InitializeAssetSortDropDown()
         {
@@ -130,6 +226,99 @@ namespace ImprovedAssetsPanel
             {
                 dropdown.items[i] = String.Format("Sort by: {0}", EnumToString((SortMode)value));
                 i++;
+            }
+
+            var uiView = FindObjectOfType<UIView>();
+
+            var panel = uiView.AddUIComponent(typeof (UIPanel)) as UIPanel;
+            panel.transform.parent = moarGroup.transform;
+            panel.size = new Vector2(600.0f, 32.0f);
+
+            var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
+
+            float x = 0.0f;
+            foreach (var assetType in assetTypes)
+            {
+                if (assetType == AssetType.All || assetType == AssetType.Unknown)
+                {
+                    continue;
+                }
+
+                var button = uiView.AddUIComponent(typeof(UIButton)) as UIButton;
+                button.size = new Vector2(32.0f, 32.0f);
+                button.normalFgSprite = GetSpriteNameForAssetType(assetType);
+                button.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
+                button.scaleFactor = 1.0f;
+                button.isVisible = true;
+                button.transform.parent = panel.transform;
+                button.AlignTo(panel, UIAlignAnchor.TopLeft);
+                button.relativePosition = new Vector3(x, 0.0f);
+                x += 34.0f;
+
+                if (assetType == AssetType.Residential)
+                {
+                    button.color = Color.green;
+                }
+                else if (assetType == AssetType.Commercial)
+                {
+                    button.color = Color.blue;
+                }
+                else if (assetType == AssetType.Industrial)
+                {
+                    button.color = Color.yellow;
+                }
+                else if (assetType == AssetType.Office)
+                {
+                    button.color = new Color32(0, 255, 255, 255);
+                }
+
+                button.focusedColor = button.color;
+                button.hoveredColor = button.color;
+                button.disabledColor = button.color;
+                button.pressedColor = button.color;
+
+                button.opacity = 0.25f;
+
+                var assetTypeCopy = assetType;
+
+                button.eventMouseHover += (component, param) =>
+                {
+                    foreach (var item in assetTypeButtons)
+                    {
+                        item.opacity = 0.25f;
+                    }
+
+                    if (filterMode == assetTypeCopy)
+                    {
+                        button.opacity = 1.0f;
+                        return;
+                    }
+
+                    button.opacity = 0.8f;
+                    button.Invalidate();
+                };
+
+                button.eventClick += (component, param) =>
+                {
+                    if (filterMode == assetTypeCopy)
+                    {
+                        filterMode = AssetType.All;
+                        button.opacity = 1.0f;
+                        RefreshAssets();
+                        return;
+                    }
+
+                    filterMode = assetType;
+                    foreach (var item in assetTypeButtons)
+                    {
+                        item.opacity = 0.25f;
+                    }
+
+                    button.opacity = 1.0f;
+                    RefreshAssets();
+                };
+
+                assetTypeButtons.Add(button);
             }
         }
 
@@ -233,6 +422,80 @@ namespace ImprovedAssetsPanel
             }
         }
 
+        private static AssetType GetAssetType(Package.Asset asset)
+        {
+            CustomAssetMetaData customAssetMetaData = null;
+
+            try
+            {
+                customAssetMetaData = asset.Instantiate<CustomAssetMetaData>();
+            }
+            catch (Exception)
+            {
+            }
+
+            if (customAssetMetaData == null)
+            {
+                return AssetType.Unknown;
+            }
+
+            if (customAssetMetaData.type == CustomAssetMetaData.Type.Prop)
+            {
+                return AssetType.Prop;
+            }
+
+            if (customAssetMetaData.type == CustomAssetMetaData.Type.Tree)
+            {
+                return AssetType.Tree;
+            }
+
+            if (customAssetMetaData.type == CustomAssetMetaData.Type.Unknown)
+            {
+                return AssetType.Unknown;
+            }
+
+            var tags = customAssetMetaData.steamTags;
+
+            if (ContainsTag(tags, "Intersection")) return AssetType.Intersection;
+            if (ContainsTag(tags, "Park")) return AssetType.Park;
+            if (ContainsTag(tags, "Electricity")) return AssetType.Electricity;
+            if (ContainsTag(tags, "WaterAndSewage")) return AssetType.WaterAndSewage;
+            if (ContainsTag(tags, "Garbage")) return AssetType.Garbage;
+            if (ContainsTag(tags, "Healthcare")) return AssetType.Healthcare;
+            if (ContainsTag(tags, "Deathcare")) return AssetType.Deathcare;
+            if (ContainsTag(tags, "FireDepartment")) return AssetType.FireDepartment;
+            if (ContainsTag(tags, "PoliceDepartment")) return AssetType.PoliceDepartment;
+            if (ContainsTag(tags, "Education")) return AssetType.Education;
+            if (ContainsTag(tags, "Transport")) return AssetType.Transport;
+            if (ContainsTag(tags, "TransportBus")) return AssetType.TransportBus;
+            if (ContainsTag(tags, "TransportMetro")) return AssetType.TransportMetro;
+            if (ContainsTag(tags, "TransportTrain")) return AssetType.TransportTrain;
+            if (ContainsTag(tags, "TransportShip")) return AssetType.TransportShip;
+            if (ContainsTag(tags, "TransportPlane")) return AssetType.TransportPlane;
+            if (ContainsTag(tags, "UniqueBuilding")) return AssetType.UniqueBuilding;
+            if (ContainsTag(tags, "Monument")) return AssetType.Monument;
+            if (ContainsTag(tags, "Residential")) return AssetType.Residential;
+            if (ContainsTag(tags, "Commercial")) return AssetType.Commercial;
+            if (ContainsTag(tags, "Industrial")) return AssetType.Industrial;
+            if (ContainsTag(tags, "Office")) return AssetType.Office;
+            if (ContainsTag(tags, "Building")) return AssetType.Building;
+
+            return AssetType.Unknown;
+        }
+
+        private static bool ContainsTag(string[] haystack, string needle)
+        {
+            foreach (var item in haystack)
+            {
+                if (item == needle)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static void RefreshAssetsList(CustomContentPanel customContentPanel)
         {
             UITemplateManager.ClearInstances(kAssetEntryTemplate);
@@ -252,11 +515,35 @@ namespace ImprovedAssetsPanel
             currentPanel.size = panelSize;
             int currentPanelCount = 0;
 
-            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToArray();
+            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList();
+
+            Dictionary<Package.Asset, AssetType> assetTypes = new Dictionary<Package.Asset, AssetType>();
+            foreach (var asset in assets)
+            {
+                assetTypes[asset] = GetAssetType(asset);
+            }
+
+            List<Package.Asset> filteredAssets;
+
+            if (filterMode == AssetType.All)
+            {
+                filteredAssets = assets;
+            }
+            else
+            {
+                filteredAssets = new List<Package.Asset>();
+                foreach (var asset in assets)
+                {
+                    if (GetAssetType(asset) == filterMode)
+                    {
+                        filteredAssets.Add(asset);
+                    }
+                }
+            }
 
             if (sortMode == SortMode.Alphabetical)
             {
-                Array.Sort(assets, (a, b) =>
+                filteredAssets.Sort((a, b) =>
                 {
                     if (a.name == null)
                     {
@@ -273,20 +560,20 @@ namespace ImprovedAssetsPanel
             }
             else if (sortMode == SortMode.LastUpdated)
             {
-                Array.Sort(assets, (a, b) =>
+                filteredAssets.Sort((a, b) =>
                 {
                     return GetAssetLastModifiedDelta(a).CompareTo(GetAssetLastModifiedDelta(b));
                 });
             }
             else if (sortMode == SortMode.LastSubscribed)
             {
-                Array.Sort(assets, (a, b) =>
+                filteredAssets.Sort((a, b) =>
                 {
                     return GetAssetCreatedDelta(a).CompareTo(GetAssetCreatedDelta(b));
                 });
             }
 
-            foreach (var current in assets)
+            foreach (var current in filteredAssets)
             {
                 var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
@@ -319,6 +606,7 @@ namespace ImprovedAssetsPanel
 
                 var image = panel.Find<UITextureSprite>("Image");
                 image.size = panel.size - new Vector2(4.0f, 2.0f);
+
                 image.position = new Vector3(0.0f, image.position.y, image.position.z);
 
                 var nameLabel = panel.Find<UILabel>("Name");
@@ -341,10 +629,12 @@ namespace ImprovedAssetsPanel
                 nameLabel.relativePosition = new Vector3(4.0f, 4.0f, nameLabel.relativePosition.z);
 
                 var delete = panel.Find<UIButton>("Delete");
+                nameLabel.anchor = UIAnchorStyle.Top | UIAnchorStyle.Right;
                 delete.size = new Vector2(24.0f, 24.0f);
                 delete.relativePosition = new Vector3(374.0f, 2.0f, delete.relativePosition.z);
 
                 var active = panel.Find<UICheckBox>("Active");
+                nameLabel.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
                 active.relativePosition = new Vector3(310.0f, 200.0f, active.relativePosition.z);
                 active.zOrder = 2;
 
@@ -364,6 +654,11 @@ namespace ImprovedAssetsPanel
                 share.size = new Vector2(view.size.x, 24.0f);
                 share.textScale = 0.7f;
                 share.relativePosition = new Vector3(4.0f + view.size.x, 198.0f, share.relativePosition.z);
+            }
+
+            if (filterMode != AssetType.All)
+            {
+                return;
             }
 
             foreach (var current in PackageManager.FilterAssets(UserAssetType.ColorCorrection))
