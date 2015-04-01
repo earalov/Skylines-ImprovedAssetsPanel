@@ -243,7 +243,7 @@ namespace ImprovedAssetsPanel
 
             var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
 
-            float x = 90.0f;
+            float x = 120.0f;
             foreach (var assetType in assetTypes)
             {
                 if (assetType == AssetType.All || assetType == AssetType.Unknown)
