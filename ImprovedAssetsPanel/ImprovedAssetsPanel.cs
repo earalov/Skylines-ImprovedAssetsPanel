@@ -212,7 +212,7 @@ namespace ImprovedAssetsPanel
             dropdown.eventSelectedIndexChanged += (component, value) =>
             {
                 sortMode = (SortMode)value;
-                RefreshAssets();
+                RefreshOnlyAssetsList();
             };
 
             var sprite = dropdown.Find<UIButton>("Sprite");
@@ -234,9 +234,16 @@ namespace ImprovedAssetsPanel
             panel.transform.parent = moarGroup.transform;
             panel.size = new Vector2(600.0f, 32.0f);
 
+            var assetTypeLabel = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
+            assetTypeLabel.text = String.Format("Filter: {0}", filterMode.ToString());
+            assetTypeLabel.transform.parent = panel.transform;
+            assetTypeLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
+            assetTypeLabel.relativePosition = new Vector3(-16.0f, 10.0f, assetTypeLabel.relativePosition.z);
+            assetTypeLabel.textScale = 0.75f;
+
             var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
 
-            float x = 0.0f;
+            float x = 90.0f;
             foreach (var assetType in assetTypes)
             {
                 if (assetType == AssetType.All || assetType == AssetType.Unknown)
@@ -280,42 +287,28 @@ namespace ImprovedAssetsPanel
                 button.opacity = 0.25f;
 
                 var assetTypeCopy = assetType;
-
-                button.eventMouseHover += (component, param) =>
-                {
-                    foreach (var item in assetTypeButtons)
-                    {
-                        item.opacity = 0.25f;
-                    }
-
-                    if (filterMode == assetTypeCopy)
-                    {
-                        button.opacity = 1.0f;
-                        return;
-                    }
-
-                    button.opacity = 0.8f;
-                    button.Invalidate();
-                };
-
+ 
                 button.eventClick += (component, param) =>
                 {
                     if (filterMode == assetTypeCopy)
                     {
                         filterMode = AssetType.All;
-                        button.opacity = 1.0f;
-                        RefreshAssets();
+                        assetTypeLabel.text = String.Format("Filter: {0}", filterMode.ToString());
+                        button.opacity = 0.25f;
+                        RefreshOnlyAssetsList();
                         return;
                     }
 
                     filterMode = assetType;
+                    assetTypeLabel.text = String.Format("Filter: {0}", filterMode.ToString());
+
                     foreach (var item in assetTypeButtons)
                     {
                         item.opacity = 0.25f;
                     }
 
                     button.opacity = 1.0f;
-                    RefreshAssets();
+                    RefreshOnlyAssetsList();
                 };
 
                 assetTypeButtons.Add(button);
@@ -339,14 +332,18 @@ namespace ImprovedAssetsPanel
 
         public static void RefreshAssets()
         {
-            Debug.LogWarning("Refreshing assets");
             var customContentPanel = GameObject.Find("(Library) CustomContentPanel").GetComponent<CustomContentPanel>();
             RefreshAllAssetsList(customContentPanel);
             RefreshPackagesList(customContentPanel);
             RefreshMapsList(customContentPanel);
             RefreshSavesList(customContentPanel);
             RefreshAssetsList(customContentPanel);
-            Debug.LogWarning("Done!");
+        }
+
+        public static void RefreshOnlyAssetsList()
+        {
+            var customContentPanel = GameObject.Find("(Library) CustomContentPanel").GetComponent<CustomContentPanel>();
+            RefreshAssetsList(customContentPanel);
         }
 
         private static void RefreshAllAssetsList(CustomContentPanel customContentPanel)
@@ -422,8 +419,15 @@ namespace ImprovedAssetsPanel
             }
         }
 
+        private static Dictionary<Package.Asset, AssetType> _assetTypeCache = new Dictionary<Package.Asset, AssetType>(); 
+
         private static AssetType GetAssetType(Package.Asset asset)
         {
+            if (_assetTypeCache.ContainsKey(asset))
+            {
+                return _assetTypeCache[asset];
+            }
+
             CustomAssetMetaData customAssetMetaData = null;
 
             try
@@ -436,50 +440,169 @@ namespace ImprovedAssetsPanel
 
             if (customAssetMetaData == null)
             {
+                _assetTypeCache[asset] = AssetType.Unknown;
                 return AssetType.Unknown;
             }
 
             if (customAssetMetaData.type == CustomAssetMetaData.Type.Prop)
             {
+                _assetTypeCache[asset] = AssetType.Prop;
                 return AssetType.Prop;
             }
 
             if (customAssetMetaData.type == CustomAssetMetaData.Type.Tree)
             {
+                _assetTypeCache[asset] = AssetType.Tree;
                 return AssetType.Tree;
             }
 
             if (customAssetMetaData.type == CustomAssetMetaData.Type.Unknown)
             {
+                _assetTypeCache[asset] = AssetType.Unknown;
                 return AssetType.Unknown;
             }
 
             var tags = customAssetMetaData.steamTags;
 
-            if (ContainsTag(tags, "Intersection")) return AssetType.Intersection;
-            if (ContainsTag(tags, "Park")) return AssetType.Park;
-            if (ContainsTag(tags, "Electricity")) return AssetType.Electricity;
-            if (ContainsTag(tags, "WaterAndSewage")) return AssetType.WaterAndSewage;
-            if (ContainsTag(tags, "Garbage")) return AssetType.Garbage;
-            if (ContainsTag(tags, "Healthcare")) return AssetType.Healthcare;
-            if (ContainsTag(tags, "Deathcare")) return AssetType.Deathcare;
-            if (ContainsTag(tags, "FireDepartment")) return AssetType.FireDepartment;
-            if (ContainsTag(tags, "PoliceDepartment")) return AssetType.PoliceDepartment;
-            if (ContainsTag(tags, "Education")) return AssetType.Education;
-            if (ContainsTag(tags, "Transport")) return AssetType.Transport;
-            if (ContainsTag(tags, "TransportBus")) return AssetType.TransportBus;
-            if (ContainsTag(tags, "TransportMetro")) return AssetType.TransportMetro;
-            if (ContainsTag(tags, "TransportTrain")) return AssetType.TransportTrain;
-            if (ContainsTag(tags, "TransportShip")) return AssetType.TransportShip;
-            if (ContainsTag(tags, "TransportPlane")) return AssetType.TransportPlane;
-            if (ContainsTag(tags, "UniqueBuilding")) return AssetType.UniqueBuilding;
-            if (ContainsTag(tags, "Monument")) return AssetType.Monument;
-            if (ContainsTag(tags, "Residential")) return AssetType.Residential;
-            if (ContainsTag(tags, "Commercial")) return AssetType.Commercial;
-            if (ContainsTag(tags, "Industrial")) return AssetType.Industrial;
-            if (ContainsTag(tags, "Office")) return AssetType.Office;
-            if (ContainsTag(tags, "Building")) return AssetType.Building;
+            if (ContainsTag(tags, "Residential"))
+            {
+                _assetTypeCache[asset] = AssetType.Residential;
+                return AssetType.Residential;
+            }
 
+            if (ContainsTag(tags, "Commercial"))
+            {
+                _assetTypeCache[asset] = AssetType.Commercial;
+                return AssetType.Commercial;
+            }
+
+            if (ContainsTag(tags, "Industrial"))
+            {
+                _assetTypeCache[asset] = AssetType.Industrial;
+                return AssetType.Industrial;
+            }
+
+            if (ContainsTag(tags, "Office"))
+            {
+                _assetTypeCache[asset] = AssetType.Office;
+                return AssetType.Office;
+            }
+
+            if (ContainsTag(tags, "Building"))
+            {
+                _assetTypeCache[asset] = AssetType.Building;
+                return AssetType.Building;
+            }
+
+            if (ContainsTag(tags, "Intersection"))
+            {
+                _assetTypeCache[asset] = AssetType.Intersection;
+                return AssetType.Intersection;
+            }
+
+            if (ContainsTag(tags, "Park"))
+            {
+                _assetTypeCache[asset] = AssetType.Park;
+                return AssetType.Park;
+            }
+
+            if (ContainsTag(tags, "Electricity"))
+            {
+                _assetTypeCache[asset] = AssetType.Electricity;
+                return AssetType.Electricity;
+            }
+
+            if (ContainsTag(tags, "WaterAndSewage"))
+            {
+                _assetTypeCache[asset] = AssetType.WaterAndSewage;
+                return AssetType.WaterAndSewage;
+            }
+
+            if (ContainsTag(tags, "Garbage"))
+            {
+                _assetTypeCache[asset] = AssetType.Garbage;
+                return AssetType.Garbage;
+            }
+
+            if (ContainsTag(tags, "Healthcare"))
+            {
+                _assetTypeCache[asset] = AssetType.Healthcare;
+                return AssetType.Healthcare;
+            }
+
+            if (ContainsTag(tags, "Deathcare"))
+            {
+                _assetTypeCache[asset] = AssetType.Deathcare;
+                return AssetType.Deathcare;
+            }
+
+            if (ContainsTag(tags, "FireDepartment"))
+            {
+                _assetTypeCache[asset] = AssetType.FireDepartment;
+                return AssetType.FireDepartment;
+            }
+
+            if (ContainsTag(tags, "PoliceDepartment"))
+            {
+                _assetTypeCache[asset] = AssetType.PoliceDepartment;
+                return AssetType.PoliceDepartment;
+            }
+
+            if (ContainsTag(tags, "Education"))
+            {
+                _assetTypeCache[asset] = AssetType.Education;
+                return AssetType.Education;
+            }
+
+            if (ContainsTag(tags, "Transport"))
+            {
+                _assetTypeCache[asset] = AssetType.Transport;
+                return AssetType.Transport;
+            }
+
+            if (ContainsTag(tags, "TransportBus"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportBus;
+                return AssetType.TransportBus;
+            }
+
+            if (ContainsTag(tags, "TransportMetro"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportMetro;
+                return AssetType.TransportMetro;
+            }
+
+            if (ContainsTag(tags, "TransportTrain"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportTrain;
+                return AssetType.TransportTrain;
+            }
+
+            if (ContainsTag(tags, "TransportShip"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportShip;
+                return AssetType.TransportShip;
+            }
+
+            if (ContainsTag(tags, "TransportPlane"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportPlane;
+                return AssetType.TransportPlane;
+            }
+
+            if (ContainsTag(tags, "UniqueBuilding"))
+            {
+                _assetTypeCache[asset] = AssetType.UniqueBuilding;
+                return AssetType.UniqueBuilding;
+            }
+
+            if (ContainsTag(tags, "Monument"))
+            {
+                _assetTypeCache[asset] = AssetType.Monument;
+                return AssetType.Monument;
+            }
+
+            _assetTypeCache[asset] = AssetType.Unknown;
             return AssetType.Unknown;
         }
 
@@ -501,19 +624,6 @@ namespace ImprovedAssetsPanel
             UITemplateManager.ClearInstances(kAssetEntryTemplate);
 
             var component = customContentPanel.Find("AssetsList");
-
-            var panels = component.GetComponentsInChildren<UIPanel>();
-            foreach (var panel in panels)
-            {
-                Destroy(panel.gameObject);
-            }
-
-            float currentX = 0;
-
-            var currentPanel = component.AddUIComponent(typeof (UIPanel)) as UIPanel;
-            var panelSize = new Vector2(1200.0f, 226.0f); 
-            currentPanel.size = panelSize;
-            int currentPanelCount = 0;
 
             var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList();
 
@@ -573,15 +683,47 @@ namespace ImprovedAssetsPanel
                 });
             }
 
+            var panels = component.GetComponentsInChildren<UIPanel>();
+            int currentPanelId = 0;
+
+            float currentX = 0;
+
+            UIPanel currentPanel = null;
+            if (panels.Any())
+            {
+                currentPanel = panels[currentPanelId++];
+                currentPanel.isVisible = true;
+            }
+            else
+            {
+                currentPanel = component.AddUIComponent(typeof(UIPanel)) as UIPanel;
+            }
+
+            var panelSize = new Vector2(1200.0f, 226.0f);
+            currentPanel.size = panelSize;
+
+            int currentPanelCount = 0;
+
             foreach (var current in filteredAssets)
             {
                 var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
+
                 currentPanelCount++;
                 if (currentPanelCount >= 3)
                 {
                     currentPanelCount = 0;
-                    currentPanel = component.AddUIComponent(typeof(UIPanel)) as UIPanel;
+
+                    if (currentPanelId <= panels.Length - 1)
+                    {
+                        currentPanel = panels[currentPanelId++];
+                        currentPanel.isVisible = true;
+                    }
+                    else
+                    {
+                        currentPanel = component.AddUIComponent(typeof(UIPanel)) as UIPanel;
+                    }
+
                     currentPanel.size = panelSize;
                 }
 
@@ -654,6 +796,11 @@ namespace ImprovedAssetsPanel
                 share.size = new Vector2(view.size.x, 24.0f);
                 share.textScale = 0.7f;
                 share.relativePosition = new Vector3(4.0f + view.size.x, 198.0f, share.relativePosition.z);
+            }
+
+            for (int i = currentPanelId; i < panels.Length; i++)
+            {
+                panels[i].isVisible = false;
             }
 
             if (filterMode != AssetType.All)
