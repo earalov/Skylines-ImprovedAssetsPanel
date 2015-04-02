@@ -977,14 +977,13 @@ namespace ImprovedAssetsPanel
                 newNameLabel.isVisible = true;
 
                 var delete = panel.Find<UIButton>("Delete");
-                nameLabel.anchor = UIAnchorStyle.Top | UIAnchorStyle.Right;
                 delete.size = new Vector2(24.0f, 24.0f);
                 delete.relativePosition = new Vector3(374.0f, 2.0f, delete.relativePosition.z);
+                delete.zOrder = 7;
 
                 var active = panel.Find<UICheckBox>("Active");
-                nameLabel.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
                 active.relativePosition = new Vector3(370.0f, 200.0f, active.relativePosition.z);
-                active.zOrder = 2;
+                active.zOrder = 7;
 
                 var favButton = panel.AddUIComponent<UIButton>();
                 favButton.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
@@ -992,6 +991,7 @@ namespace ImprovedAssetsPanel
                 favButton.size = new Vector2(36.0f, 36.0f);
                 favButton.relativePosition = new Vector3(362.0f, 164.0f);
                 favButton.opacity = config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64) ? 1.0f : 0.5f;
+                favButton.zOrder = 7;
 
                 favButton.eventClick += (uiComponent, param) =>
                 {
@@ -1015,10 +1015,11 @@ namespace ImprovedAssetsPanel
                 onOff.textScale = 0.75f;
                 onOff.text = "Active";
                 onOff.relativePosition = new Vector3(-34.0f, 5.0f, onOff.relativePosition.z);
+                onOff.zOrder = 7;
 
                 var view = panel.Find<UIButton>("View");
                 view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
-                view.zOrder = 2;
+                view.zOrder = 7;
                 view.size = new Vector2(32.0f, 32.0f);
                 view.textScale = 0.7f;
                 view.relativePosition = new Vector3(4.0f, 192.0f, view.relativePosition.z);
@@ -1033,7 +1034,7 @@ namespace ImprovedAssetsPanel
                 view.pressedBgSprite = "";
 
                 var share = panel.Find<UIButton>("Share");
-                share.zOrder = 2;
+                share.zOrder = 7;
                 share.size = new Vector2(view.size.x, 24.0f);
                 share.textScale = 0.7f;
                 share.relativePosition = new Vector3(4.0f + view.size.x, 198.0f, share.relativePosition.z);
