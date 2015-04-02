@@ -75,8 +75,7 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        private static bool bootstrapped;
-
+        private static UIPanel filterButtons;
         private static UIPanel sortDropDown;
         private static SortMode sortMode = SortMode.Alphabetical;
         private static AssetType filterMode = AssetType.All;
@@ -86,7 +85,7 @@ namespace ImprovedAssetsPanel
         private static readonly string kSaveEntryTemplate = "SaveEntryTemplate";
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
 
-        private static List<UIButton> assetTypeButtons = new List<UIButton>();
+        private static List<UIButton> assetTypeButtons;
 
         private static UIPanel newAssetsPanel;
         private static UIPanel[] assetRows;
@@ -181,58 +180,80 @@ namespace ImprovedAssetsPanel
             return "";
         }
 
+        private static RedirectCallsState state;
+
         public static void Bootstrap()
         {
-            try
+            var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
+            if (syncObject == null)
             {
-                LoadConfig();
-
-                InitializeAssetSortDropDown();
-
-                if (bootstrapped)
+                new GameObject("ImprovedAssetsPanelSyncObject").AddComponent<UpdateHook>().onUnityDestroy = () =>
                 {
-                    return;
-                }
-
-                RedirectionHelper.RedirectCalls
-                (
-                    typeof(CustomContentPanel).GetMethod("Refresh",
-                        BindingFlags.Instance | BindingFlags.NonPublic),
-                    typeof(ImprovedAssetsPanel).GetMethod("RefreshAssets",
-                        BindingFlags.Static | BindingFlags.Public)
-                );
-
-                var customContentPanel = GameObject.Find("(Library) CustomContentPanel").GetComponent<CustomContentPanel>();
-                customContentPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
-                {
-                    RefreshAssets();
+                    Revert();
                 };
-
-                bootstrapped = true;
             }
-            catch (Exception ex)
+            else
             {
-                Debug.LogException(ex);
+                return;
             }
+
+            LoadConfig();
+
+            Initialize();
+
+            state = RedirectionHelper.RedirectCalls
+            (
+                typeof(CustomContentPanel).GetMethod("Refresh",
+                    BindingFlags.Instance | BindingFlags.NonPublic),
+                typeof(ImprovedAssetsPanel).GetMethod("RefreshAssets",
+                    BindingFlags.Static | BindingFlags.Public)
+            );
+
+            var customContentPanel = GameObject.Find("(Library) CustomContentPanel").GetComponent<CustomContentPanel>();
+            customContentPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
+            {
+                RefreshAssets();
+            };
         }
 
         public static void Revert()
         {
-            if (!bootstrapped)
-            {
-                return;
-            }
+            RedirectionHelper.RevertRedirect(typeof (CustomContentPanel).GetMethod("Refresh",
+                        BindingFlags.Instance | BindingFlags.NonPublic), state);
 
-            bootstrapped = false;
+            var assetsList = GameObject.Find("Assets").GetComponent<UIComponent>().Find<UIScrollablePanel>("AssetsList");
+
+            var scrollbar =
+                GameObject.Find("AssetsList")
+                    .transform.parent.GetComponent<UIComponent>()
+                    .Find<UIScrollbar>("Scrollbar");
+
+            assetsList.verticalScrollbar = scrollbar;
+            assetsList.isVisible = true;
+
+            Destroy(sortDropDown.gameObject);
+            Destroy(filterButtons.gameObject);
+            Destroy(newAssetsPanel.gameObject);
+
+            filterButtons = null;
+            sortDropDown = null;
+            sortMode = SortMode.Alphabetical;
+            filterMode = AssetType.All;
+            newAssetsPanel = null;
+            assetRows = null;
+
+            _assetTypeCache = new Dictionary<Package.Asset, AssetType>();
+            _assetCache = new List<Package.Asset>();
+
+            var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
+            if (syncObject == null)
+            {
+                Destroy(syncObject);
+            }
         }
 
-        private static void InitializeAssetSortDropDown()
+        private static void Initialize()
         {
-            if (GameObject.Find("AssetsSortBy") != null)
-            {
-                return;
-            }
-
             var shadows = GameObject.Find("Shadows").GetComponent<UIPanel>();
 
             if (shadows == null)
@@ -288,9 +309,9 @@ namespace ImprovedAssetsPanel
 
             var uiView = FindObjectOfType<UIView>();
 
-            var panel = uiView.AddUIComponent(typeof (UIPanel)) as UIPanel;
-            panel.transform.parent = moarGroup.transform;
-            panel.size = new Vector2(600.0f, 32.0f);
+            filterButtons = uiView.AddUIComponent(typeof (UIPanel)) as UIPanel;
+            filterButtons.transform.parent = moarGroup.transform;
+            filterButtons.size = new Vector2(600.0f, 32.0f);
 
             var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
 
@@ -300,6 +321,8 @@ namespace ImprovedAssetsPanel
                 GameObject.Find("AssetsList")
                     .transform.parent.GetComponent<UIComponent>()
                     .Find<UIScrollbar>("Scrollbar");
+
+            assetTypeButtons = new List<UIButton>();
 
             float x = 0.0f;
             foreach (var assetType in assetTypes)
@@ -332,8 +355,8 @@ namespace ImprovedAssetsPanel
                 button.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
                 button.scaleFactor = 1.0f;
                 button.isVisible = true;
-                button.transform.parent = panel.transform;
-                button.AlignTo(panel, UIAlignAnchor.TopLeft);
+                button.transform.parent = filterButtons.transform;
+                button.AlignTo(filterButtons, UIAlignAnchor.TopLeft);
                 button.relativePosition = new Vector3(x, 0.0f);
                 x += 34.0f;
 
@@ -433,7 +456,6 @@ namespace ImprovedAssetsPanel
                 assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
                 y += assetRows[q].size.y + 4;
             }
-
 
             scrollbar.eventValueChanged += (component, value) =>
             {
@@ -1002,7 +1024,7 @@ namespace ImprovedAssetsPanel
                 newNameLabel.size = new Vector2(380.0f, 224.0f);
                 newNameLabel.relativePosition = new Vector3(4.0f, 4.0f, nameLabel.relativePosition.z);
                 newNameLabel.isVisible = true;
-
+              
                 var delete = panel.Find<UIButton>("Delete");
                 delete.size = new Vector2(24.0f, 24.0f);
                 delete.relativePosition = new Vector3(374.0f, 2.0f, delete.relativePosition.z);

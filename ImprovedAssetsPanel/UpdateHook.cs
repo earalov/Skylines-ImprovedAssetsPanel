@@ -6,7 +6,10 @@ namespace ImprovedAssetsPanel
     {
         public delegate void OnUnityUpdate();
 
+        public delegate void OnUnityDestroy();
+
         public OnUnityUpdate onUnityUpdate = null;
+        public OnUnityDestroy onUnityDestroy = null;
         public bool once = true;
 
         void Update()
@@ -18,6 +21,14 @@ namespace ImprovedAssetsPanel
                 {
                     Destroy(this);
                 }
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (onUnityDestroy != null)
+            {
+                onUnityDestroy();
             }
         }
 
