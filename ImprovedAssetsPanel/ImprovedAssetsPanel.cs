@@ -1092,7 +1092,7 @@ namespace ImprovedAssetsPanel
 
                 var share = panel.Find<UIButton>("Share");
                 share.zOrder = 7;
-                share.size = new Vector2(view.size.x, 24.0f);
+                share.size = new Vector2(80.0f, 24.0f);
                 share.textScale = 0.7f;
                 share.relativePosition = new Vector3(4.0f + view.size.x, 198.0f, share.relativePosition.z);
             }
