@@ -50,8 +50,8 @@ namespace ImprovedAssetsPanel
             TransportPlane,
             UniqueBuilding,
             Monument,
-            Unknown,
             ColorLUT,
+            Unknown,
         }
 
         private static readonly string configPath = "ImprovedAssetsPanelConfig.xml";
@@ -86,12 +86,16 @@ namespace ImprovedAssetsPanel
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
 
         private static List<UIButton> assetTypeButtons;
+        private static List<UILabel> assetTypeLabels; 
 
         private static UIPanel newAssetsPanel;
         private static UIPanel[] assetRows;
 
         private static Dictionary<Package.Asset, AssetType> _assetTypeCache = new Dictionary<Package.Asset, AssetType>();
         private static List<Package.Asset> _assetCache = new List<Package.Asset>();
+
+        private static float scrollPositionY = 0.0f;
+        private static float maxScrollPositionY = 0.0f;
 
         private static string GetSpriteNameForAssetType(AssetType assetType, bool hovered = false)
         {
@@ -315,7 +319,7 @@ namespace ImprovedAssetsPanel
             filterButtons.transform.parent = moarGroup.transform;
             filterButtons.size = new Vector2(600.0f, 32.0f);
 
-            var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
+            var assetTypes = (AssetType[])Enum.GetValues(typeof(AssetType));
 
             var assetsList = GameObject.Find("Assets").GetComponent<UIComponent>().Find<UIScrollablePanel>("AssetsList");
 
@@ -325,6 +329,7 @@ namespace ImprovedAssetsPanel
                     .Find<UIScrollbar>("Scrollbar");
 
             assetTypeButtons = new List<UIButton>();
+            assetTypeLabels = new List<UILabel>();
 
             float x = 0.0f;
             foreach (var assetType in assetTypes)
@@ -418,6 +423,15 @@ namespace ImprovedAssetsPanel
                 };
 
                 assetTypeButtons.Add(button);
+
+                var label = uiView.AddUIComponent(typeof (UILabel)) as UILabel;
+                label.text = "99";
+                label.AlignTo(button, UIAlignAnchor.TopRight);
+                label.relativePosition = new Vector3(24.0f, 0.0f, 0.0f);
+                label.zOrder = 7;
+                label.textScale = 0.5f;
+                label.textColor = Color.white;
+                assetTypeLabels.Add(label);
             }
 
             assetsList.verticalScrollbar = null;
@@ -487,8 +501,49 @@ namespace ImprovedAssetsPanel
             };
         }
 
-        private static float scrollPositionY = 0.0f;
-        private static float maxScrollPositionY = 0.0f;
+
+        private static void SetAssetCountLabels()
+        {
+            var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
+
+            int i = 0;
+            foreach (var label in assetTypeLabels)
+            {
+                int count = 0;
+
+                if (assetTypes[i] == AssetType.ColorLUT)
+                {
+                    label.text = PackageManager.FilterAssets(UserAssetType.ColorCorrection).Count().ToString();
+                    i++;
+                    continue;
+                }
+
+                if (assetTypes[i] == AssetType.All)
+                {
+                    label.text = _assetTypeCache.Count.ToString();
+                    i++;
+                    continue;
+                }
+
+                if (assetTypes[i] == AssetType.Favorite)
+                {
+                    label.text = config.favoriteAssets.Count.ToString();
+                    i++;
+                    continue;
+                }
+
+                foreach (var item in _assetTypeCache)
+                {
+                    if (item.Value == assetTypes[i])
+                    {
+                        count++;
+                    }
+                }
+
+                label.text = count.ToString();
+                i++;
+            }
+        }
 
         private static int rowCount
         {
@@ -1125,6 +1180,7 @@ namespace ImprovedAssetsPanel
 
             PreCacheAssets();
             SortCachedAssets();
+            SetAssetCountLabels();
 
             float y = 0.0f;
 
