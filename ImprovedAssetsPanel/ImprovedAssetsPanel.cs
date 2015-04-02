@@ -454,7 +454,7 @@ namespace ImprovedAssetsPanel
                 assetRows[q].name = "AssetRow" + q;
                 assetRows[q].size = new Vector2(1200.0f, 226.0f);;
                 assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
-                y += assetRows[q].size.y + 4;
+                y += assetRows[q].size.y;
             }
 
             scrollbar.eventValueChanged += (component, value) =>
@@ -506,7 +506,7 @@ namespace ImprovedAssetsPanel
         {
             if (assetRows[0].relativePosition.y + assetRows[0].size.y + 4.0f < 0.0f)
             {
-                assetRows[0].relativePosition = new Vector3(0.0f, assetRows[3].relativePosition.y + assetRows[3].size.y + 4.0f);
+                assetRows[0].relativePosition = new Vector3(0.0f, assetRows[3].relativePosition.y + assetRows[3].size.y + 2.0f);
                 var firstRealRow = (int)Mathf.Floor(scrollPositionY/(assetRows[0].size.y+4.0f));
                 var lastRealRow = firstRealRow + 3;
                 DrawAssets(0, lastRealRow);
@@ -514,7 +514,7 @@ namespace ImprovedAssetsPanel
             }
             else if (assetRows[0].relativePosition.y > 0.0f)
             {
-                assetRows[3].relativePosition = new Vector3(0.0f, assetRows[0].relativePosition.y - assetRows[3].size.y - 4.0f);
+                assetRows[3].relativePosition = new Vector3(0.0f, assetRows[0].relativePosition.y - assetRows[3].size.y - 2.0f);
                 var firstRealRow = (int)Mathf.Floor(scrollPositionY / (assetRows[0].size.y + 4.0f));
                 DrawAssets(3, firstRealRow);
                 ShiftRowsDown();
@@ -1129,7 +1129,7 @@ namespace ImprovedAssetsPanel
             for (int q = 0; q < 4; q++)
             {
                 assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
-                y += assetRows[q].size.y + 4;
+                y += assetRows[q].size.y + 2.0f;
             }
 
             scrollPositionY = 0.0f;
