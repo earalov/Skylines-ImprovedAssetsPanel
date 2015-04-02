@@ -940,16 +940,21 @@ namespace ImprovedAssetsPanel
                 image.position = new Vector3(0.0f, image.position.y, image.position.z);
 
                 var nameLabel = panel.Find<UILabel>("Name");
+                nameLabel.isVisible = false;
 
-                nameLabel.zOrder = 2;
-                nameLabel.textColor = Color.white;
-                nameLabel.autoHeight = false;
-                nameLabel.autoSize = false;
-                nameLabel.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
-                nameLabel.textAlignment = UIHorizontalAlignment.Left;
-                nameLabel.verticalAlignment = UIVerticalAlignment.Top;
-                nameLabel.size = new Vector2(380.0f, 224.0f);
-                nameLabel.relativePosition = new Vector3(4.0f, 4.0f, nameLabel.relativePosition.z);
+                var newNameLabel = panel.AddUIComponent<UILabel>();
+                newNameLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
+                newNameLabel.text = current.name;
+                newNameLabel.zOrder = 7;
+                newNameLabel.textColor = Color.white;
+                newNameLabel.autoHeight = false;
+                newNameLabel.autoSize = false;
+                newNameLabel.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
+                newNameLabel.textAlignment = UIHorizontalAlignment.Left;
+                newNameLabel.verticalAlignment = UIVerticalAlignment.Top;
+                newNameLabel.size = new Vector2(380.0f, 224.0f);
+                newNameLabel.relativePosition = new Vector3(4.0f, 4.0f, nameLabel.relativePosition.z);
+                newNameLabel.isVisible = true;
 
                 var delete = panel.Find<UIButton>("Delete");
                 nameLabel.anchor = UIAnchorStyle.Top | UIAnchorStyle.Right;
