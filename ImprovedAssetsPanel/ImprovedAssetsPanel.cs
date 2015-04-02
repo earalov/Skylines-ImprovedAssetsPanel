@@ -197,6 +197,8 @@ namespace ImprovedAssetsPanel
                 return;
             }
 
+            new GameObject().AddComponent<ImprovedAssetsPanel>().name = "ImprovedAssetsPanel";
+
             LoadConfig();
 
             Initialize();
@@ -504,10 +506,10 @@ namespace ImprovedAssetsPanel
 
         private static void SwapRows()
         {
-            if (assetRows[0].relativePosition.y + assetRows[0].size.y + 4.0f < 0.0f)
+            if (assetRows[0].relativePosition.y + assetRows[0].size.y + 2.0f < 0.0f)
             {
                 assetRows[0].relativePosition = new Vector3(0.0f, assetRows[3].relativePosition.y + assetRows[3].size.y + 2.0f);
-                var firstRealRow = (int)Mathf.Floor(scrollPositionY/(assetRows[0].size.y+4.0f));
+                var firstRealRow = (int)Mathf.Floor(scrollPositionY/(assetRows[0].size.y+2.0f));
                 var lastRealRow = firstRealRow + 3;
                 DrawAssets(0, lastRealRow);
                 ShiftRowsUp();
@@ -515,7 +517,7 @@ namespace ImprovedAssetsPanel
             else if (assetRows[0].relativePosition.y > 0.0f)
             {
                 assetRows[3].relativePosition = new Vector3(0.0f, assetRows[0].relativePosition.y - assetRows[3].size.y - 2.0f);
-                var firstRealRow = (int)Mathf.Floor(scrollPositionY / (assetRows[0].size.y + 4.0f));
+                var firstRealRow = (int)Mathf.Floor(scrollPositionY / (assetRows[0].size.y + 2.0f));
                 DrawAssets(3, firstRealRow);
                 ShiftRowsDown();
             }
@@ -702,25 +704,115 @@ namespace ImprovedAssetsPanel
                 return AssetType.Unknown;
             }
 
-            if (customAssetMetaData.type == CustomAssetMetaData.Type.Prop)
-            {
-                _assetTypeCache[asset] = AssetType.Prop;
-                return AssetType.Prop;
-            }
-
-            if (customAssetMetaData.type == CustomAssetMetaData.Type.Tree)
-            {
-                _assetTypeCache[asset] = AssetType.Tree;
-                return AssetType.Tree;
-            }
-
-            if (customAssetMetaData.type == CustomAssetMetaData.Type.Unknown)
-            {
-                _assetTypeCache[asset] = AssetType.Unknown;
-                return AssetType.Unknown;
-            }
-
             var tags = customAssetMetaData.steamTags;
+
+            if (ContainsTag(tags, "Intersection"))
+            {
+                _assetTypeCache[asset] = AssetType.Intersection;
+                return AssetType.Intersection;
+            }
+
+            if (ContainsTag(tags, "Park"))
+            {
+                _assetTypeCache[asset] = AssetType.Park;
+                return AssetType.Park;
+            }
+
+            if (ContainsTag(tags, "Electricity"))
+            {
+                _assetTypeCache[asset] = AssetType.Electricity;
+                return AssetType.Electricity;
+            }
+
+            if (ContainsTag(tags, "Water & Sewage"))
+            {
+                _assetTypeCache[asset] = AssetType.WaterAndSewage;
+                return AssetType.WaterAndSewage;
+            }
+
+            if (ContainsTag(tags, "Garbage"))
+            {
+                _assetTypeCache[asset] = AssetType.Garbage;
+                return AssetType.Garbage;
+            }
+
+            if (ContainsTag(tags, "Healthcare"))
+            {
+                _assetTypeCache[asset] = AssetType.Healthcare;
+                return AssetType.Healthcare;
+            }
+
+            if (ContainsTag(tags, "Deathcare"))
+            {
+                _assetTypeCache[asset] = AssetType.Deathcare;
+                return AssetType.Deathcare;
+            }
+
+            if (ContainsTag(tags, "Fire Department"))
+            {
+                _assetTypeCache[asset] = AssetType.FireDepartment;
+                return AssetType.FireDepartment;
+            }
+
+            if (ContainsTag(tags, "Police Department"))
+            {
+                _assetTypeCache[asset] = AssetType.PoliceDepartment;
+                return AssetType.PoliceDepartment;
+            }
+
+            if (ContainsTag(tags, "Transport Bus"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportBus;
+                return AssetType.TransportBus;
+            }
+
+            if (ContainsTag(tags, "Transport Metro"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportMetro;
+                return AssetType.TransportMetro;
+            }
+
+            if (ContainsTag(tags, "Transport Train"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportTrain;
+                return AssetType.TransportTrain;
+            }
+
+            if (ContainsTag(tags, "Transport Ship"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportShip;
+                return AssetType.TransportShip;
+            }
+
+            if (ContainsTag(tags, "Transport Plane"))
+            {
+                _assetTypeCache[asset] = AssetType.TransportPlane;
+                return AssetType.TransportPlane;
+            }
+
+            if (ContainsTag(tags, "Unique Building"))
+            {
+                _assetTypeCache[asset] = AssetType.UniqueBuilding;
+                return AssetType.UniqueBuilding;
+            }
+
+            if (ContainsTag(tags, "Monument"))
+            {
+                _assetTypeCache[asset] = AssetType.Monument;
+                return AssetType.Monument;
+            }
+
+            if (ContainsTag(tags, "Education"))
+            {
+                _assetTypeCache[asset] = AssetType.Education;
+                return AssetType.Education;
+            }
+
+            if (ContainsTag(tags, "Transport"))
+            {
+                _assetTypeCache[asset] = AssetType.Transport;
+                return AssetType.Transport;
+            }
 
             if (ContainsTag(tags, "Residential"))
             {
@@ -752,112 +844,22 @@ namespace ImprovedAssetsPanel
                 return AssetType.Building;
             }
 
-            if (ContainsTag(tags, "Intersection"))
+            if (customAssetMetaData.type == CustomAssetMetaData.Type.Prop)
             {
-                _assetTypeCache[asset] = AssetType.Intersection;
-                return AssetType.Intersection;
+                _assetTypeCache[asset] = AssetType.Prop;
+                return AssetType.Prop;
             }
 
-            if (ContainsTag(tags, "Park"))
+            if (customAssetMetaData.type == CustomAssetMetaData.Type.Tree)
             {
-                _assetTypeCache[asset] = AssetType.Park;
-                return AssetType.Park;
+                _assetTypeCache[asset] = AssetType.Tree;
+                return AssetType.Tree;
             }
 
-            if (ContainsTag(tags, "Electricity"))
+            if (customAssetMetaData.type == CustomAssetMetaData.Type.Unknown)
             {
-                _assetTypeCache[asset] = AssetType.Electricity;
-                return AssetType.Electricity;
-            }
-
-            if (ContainsTag(tags, "WaterAndSewage"))
-            {
-                _assetTypeCache[asset] = AssetType.WaterAndSewage;
-                return AssetType.WaterAndSewage;
-            }
-
-            if (ContainsTag(tags, "Garbage"))
-            {
-                _assetTypeCache[asset] = AssetType.Garbage;
-                return AssetType.Garbage;
-            }
-
-            if (ContainsTag(tags, "Healthcare"))
-            {
-                _assetTypeCache[asset] = AssetType.Healthcare;
-                return AssetType.Healthcare;
-            }
-
-            if (ContainsTag(tags, "Deathcare"))
-            {
-                _assetTypeCache[asset] = AssetType.Deathcare;
-                return AssetType.Deathcare;
-            }
-
-            if (ContainsTag(tags, "FireDepartment"))
-            {
-                _assetTypeCache[asset] = AssetType.FireDepartment;
-                return AssetType.FireDepartment;
-            }
-
-            if (ContainsTag(tags, "PoliceDepartment"))
-            {
-                _assetTypeCache[asset] = AssetType.PoliceDepartment;
-                return AssetType.PoliceDepartment;
-            }
-
-            if (ContainsTag(tags, "Education"))
-            {
-                _assetTypeCache[asset] = AssetType.Education;
-                return AssetType.Education;
-            }
-
-            if (ContainsTag(tags, "Transport"))
-            {
-                _assetTypeCache[asset] = AssetType.Transport;
-                return AssetType.Transport;
-            }
-
-            if (ContainsTag(tags, "TransportBus"))
-            {
-                _assetTypeCache[asset] = AssetType.TransportBus;
-                return AssetType.TransportBus;
-            }
-
-            if (ContainsTag(tags, "TransportMetro"))
-            {
-                _assetTypeCache[asset] = AssetType.TransportMetro;
-                return AssetType.TransportMetro;
-            }
-
-            if (ContainsTag(tags, "TransportTrain"))
-            {
-                _assetTypeCache[asset] = AssetType.TransportTrain;
-                return AssetType.TransportTrain;
-            }
-
-            if (ContainsTag(tags, "TransportShip"))
-            {
-                _assetTypeCache[asset] = AssetType.TransportShip;
-                return AssetType.TransportShip;
-            }
-
-            if (ContainsTag(tags, "TransportPlane"))
-            {
-                _assetTypeCache[asset] = AssetType.TransportPlane;
-                return AssetType.TransportPlane;
-            }
-
-            if (ContainsTag(tags, "UniqueBuilding"))
-            {
-                _assetTypeCache[asset] = AssetType.UniqueBuilding;
-                return AssetType.UniqueBuilding;
-            }
-
-            if (ContainsTag(tags, "Monument"))
-            {
-                _assetTypeCache[asset] = AssetType.Monument;
-                return AssetType.Monument;
+                _assetTypeCache[asset] = AssetType.Unknown;
+                return AssetType.Unknown;
             }
 
             _assetTypeCache[asset] = AssetType.Unknown;
@@ -1133,7 +1135,7 @@ namespace ImprovedAssetsPanel
             }
 
             scrollPositionY = 0.0f;
-            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y + 4);
+            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y + 2.0f);
             SetScrollBar(maxScrollPositionY, newAssetsPanel.size.y);
 
             DrawAssets(0, 0);
