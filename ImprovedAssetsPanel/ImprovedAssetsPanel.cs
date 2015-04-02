@@ -311,6 +311,7 @@ namespace ImprovedAssetsPanel
 
                 var button = uiView.AddUIComponent(typeof(UIButton)) as UIButton;
                 button.size = new Vector2(32.0f, 32.0f);
+                button.tooltip = assetType.ToString();
 
                 if (assetType != AssetType.ColorLUT && assetType != AssetType.All)
                 {
@@ -1010,6 +1011,7 @@ namespace ImprovedAssetsPanel
                 var active = panel.Find<UICheckBox>("Active");
                 active.relativePosition = new Vector3(370.0f, 200.0f, active.relativePosition.z);
                 active.zOrder = 7;
+                active.tooltip = "Activate/ deactivate asset";
 
                 var favButton = panel.AddUIComponent<UIButton>();
                 favButton.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
@@ -1019,8 +1021,11 @@ namespace ImprovedAssetsPanel
                 favButton.focusedFgSprite = "InfoIconHealth";
                 favButton.size = new Vector2(36.0f, 36.0f);
                 favButton.relativePosition = new Vector3(362.0f, 164.0f);
-                favButton.opacity = config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64) ? 1.0f : 0.5f;
+
+                var isFavorite = config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
+                favButton.opacity = isFavorite ? 1.0f : 0.5f;
                 favButton.zOrder = 7;
+                favButton.tooltip = "Set/ unset favorite";
 
                 favButton.eventClick += (uiComponent, param) =>
                 {
@@ -1061,6 +1066,7 @@ namespace ImprovedAssetsPanel
                 view.focusedBgSprite = "";
                 view.pressedFgSprite = "OptionsPressed";
                 view.pressedBgSprite = "";
+                view.tooltip = "View in Workshop";
 
                 var share = panel.Find<UIButton>("Share");
                 share.zOrder = 7;
