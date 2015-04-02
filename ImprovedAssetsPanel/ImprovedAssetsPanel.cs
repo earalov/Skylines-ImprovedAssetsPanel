@@ -271,6 +271,13 @@ namespace ImprovedAssetsPanel
 
             var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
 
+            var assetsList = GameObject.Find("Assets").GetComponent<UIComponent>().Find<UIScrollablePanel>("AssetsList");
+
+            var scrollbar =
+                GameObject.Find("AssetsList")
+                    .transform.parent.GetComponent<UIComponent>()
+                    .Find<UIScrollbar>("Scrollbar");
+
             float x = 0.0f;
             foreach (var assetType in assetTypes)
             {
@@ -335,6 +342,19 @@ namespace ImprovedAssetsPanel
                 {
                     filterMode = assetType;
 
+                    if (filterMode == AssetType.ColorLUT)
+                    {
+                        assetsList.isVisible = true;
+                        assetsList.verticalScrollbar = scrollbar;
+                        newAssetsPanel.isVisible = false;
+                    }
+                    else
+                    {
+                        assetsList.isVisible = false;
+                        assetsList.verticalScrollbar = null;
+                        newAssetsPanel.isVisible = true;
+                    }
+
                     foreach (var item in assetTypeButtons)
                     {
                         item.opacity = 0.25f;
@@ -348,7 +368,6 @@ namespace ImprovedAssetsPanel
                 assetTypeButtons.Add(button);
             }
 
-            var assetsList = GameObject.Find("Assets").GetComponent<UIComponent>().Find<UIScrollablePanel>("AssetsList");
             assetsList.verticalScrollbar = null;
             assetsList.isVisible = false;
 
@@ -388,13 +407,14 @@ namespace ImprovedAssetsPanel
                 y += assetRows[q].size.y + 4;
             }
 
-            var scrollbar =
-                GameObject.Find("AssetsList")
-                    .transform.parent.GetComponent<UIComponent>()
-                    .Find<UIScrollbar>("Scrollbar");
 
             scrollbar.eventValueChanged += (component, value) =>
             {
+                if (!newAssetsPanel.isVisible)
+                {
+                    return;
+                }
+
                 if (value != scrollPositionY)
                 {
                     if (rowCount <= 2)
@@ -1024,12 +1044,13 @@ namespace ImprovedAssetsPanel
         {
             UITemplateManager.ClearInstances(kAssetEntryTemplate);
 
-           /* if (filterMode == AssetType.ColorLUT)
+            if (filterMode == AssetType.ColorLUT)
             {
                 foreach (var current in PackageManager.FilterAssets(UserAssetType.ColorCorrection))
                 {
+                    var assetsList = GameObject.Find("Assets").GetComponent<UIComponent>().Find<UIScrollablePanel>("AssetsList");
                     var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
-                    newAssetsPanel.AttachUIComponent(packageEntry.gameObject);
+                    assetsList.AttachUIComponent(packageEntry.gameObject);
                     packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
                         current.type, ")");
                     packageEntry.entryActive = current.isEnabled;
@@ -1040,7 +1061,7 @@ namespace ImprovedAssetsPanel
                 }
 
                 return;
-            }*/
+            }
 
             PreCacheAssets();
             SortCachedAssets();
