@@ -85,6 +85,14 @@ namespace ImprovedAssetsPanel
         private static readonly string kSaveEntryTemplate = "SaveEntryTemplate";
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
 
+        private static List<UIButton> assetTypeButtons = new List<UIButton>();
+
+        private static UIPanel newAssetsPanel;
+        private static UIPanel[] assetRows;
+
+        private static Dictionary<Package.Asset, AssetType> _assetTypeCache = new Dictionary<Package.Asset, AssetType>();
+        private static List<Package.Asset> _assetCache = new List<Package.Asset>();
+
         private static string GetSpriteNameForAssetType(AssetType assetType)
         {
             switch (assetType)
@@ -163,13 +171,6 @@ namespace ImprovedAssetsPanel
                     return;
                 }
 
-                var customContentPanel = GameObject.Find("(Library) CustomContentPanel").GetComponent<CustomContentPanel>();
-
-                customContentPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
-                {
-                    RefreshAssets();
-                };
-
                 RedirectionHelper.RedirectCalls
                 (
                     typeof(CustomContentPanel).GetMethod("Refresh",
@@ -177,6 +178,12 @@ namespace ImprovedAssetsPanel
                     typeof(ImprovedAssetsPanel).GetMethod("RefreshAssets",
                         BindingFlags.Static | BindingFlags.Public)
                 );
+
+                var customContentPanel = GameObject.Find("(Library) CustomContentPanel").GetComponent<CustomContentPanel>();
+                customContentPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
+                {
+                    RefreshAssets();
+                };
 
                 bootstrapped = true;
             }
@@ -195,8 +202,6 @@ namespace ImprovedAssetsPanel
 
             bootstrapped = false;
         }
-
-        private static List<UIButton> assetTypeButtons = new List<UIButton>(); 
 
         private static void InitializeAssetSortDropDown()
         {
@@ -326,8 +331,6 @@ namespace ImprovedAssetsPanel
                     button.opacity = 1.0f;
                 }
 
-                var assetTypeCopy = assetType;
- 
                 button.eventClick += (component, param) =>
                 {
                     filterMode = assetType;
@@ -345,25 +348,151 @@ namespace ImprovedAssetsPanel
                 assetTypeButtons.Add(button);
             }
 
-            var customContentPanel = GameObject.Find("(Library) CustomContentPanel").GetComponent<CustomContentPanel>();
             var assetsList = GameObject.Find("Assets").GetComponent<UIComponent>().Find<UIScrollablePanel>("AssetsList");
+            assetsList.verticalScrollbar = null;
+            assetsList.isVisible = false;
 
-            assetsList.eventScrollPositionChanged += (component, value) =>
+            newAssetsPanel = assetsList.transform.parent.GetComponent<UIComponent>().AddUIComponent<UIPanel>();
+            newAssetsPanel.anchor = assetsList.anchor;
+            newAssetsPanel.size = assetsList.size;
+            newAssetsPanel.relativePosition = assetsList.relativePosition;
+            newAssetsPanel.name = "NewAssetsList";
+            newAssetsPanel.clipChildren = true;
+
+            newAssetsPanel.eventMouseWheel += (component, param) =>
             {
-                while (value.y/226.0f >= currentPanelId - 3)
+                if (rowCount <= 2)
                 {
-                    if (currentPanelId <= _cachedAssets.Count/3)
+                    return;
+                }
+
+                var originalScrollPos = scrollPositionY;
+                scrollPositionY -= param.wheelDelta * 64.0f;
+                scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY-newAssetsPanel.size.y);
+
+                ScrollRows(originalScrollPos - scrollPositionY);
+                SwapRows();
+
+                SetScrollBar(scrollPositionY);
+            };
+
+            float y = 0.0f;
+
+            assetRows = new UIPanel[4];
+            for (int q = 0; q < 4; q++)
+            {
+                assetRows[q] = newAssetsPanel.AddUIComponent<UIPanel>();
+                assetRows[q].name = "AssetRow" + q;
+                assetRows[q].size = new Vector2(1200.0f, 226.0f);;
+                assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
+                y += assetRows[q].size.y + 4;
+            }
+
+            var scrollbar =
+                GameObject.Find("AssetsList")
+                    .transform.parent.GetComponent<UIComponent>()
+                    .Find<UIScrollbar>("Scrollbar");
+
+            scrollbar.eventValueChanged += (component, value) =>
+            {
+                if (value != scrollPositionY)
+                {
+                    if (rowCount <= 2)
                     {
-                        DrawAssets(customContentPanel, currentPanelId);
+                        return;
                     }
-                    else
-                    {
-                        break;
-                    }
+
+                    var originalScrollPos = scrollPositionY;
+                    scrollPositionY = value;
+                    scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY - newAssetsPanel.size.y);
+
+                    var diff = Mathf.Clamp(scrollPositionY - originalScrollPos, -(assetRows[0].size.y + 4), assetRows[0].size.y + 4);
+                    scrollPositionY = originalScrollPos + diff;
+                    ScrollRows(-diff);
+                    SwapRows();
+
+                    SetScrollBar(scrollPositionY);
                 }
             };
         }
+
+        private static float scrollPositionY = 0.0f;
+        private static float maxScrollPositionY = 0.0f;
+
+        private static int rowCount
+        {
+            get { return (int) Mathf.Ceil(_assetCache.Count/3.0f); }
+        }
+
+        private static void ScrollRows(float yOffset)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                var row = assetRows[i];
+                row.relativePosition = new Vector3(row.relativePosition.x, row.relativePosition.y + yOffset, row.relativePosition.z);
+            }
+        }
+
+        private static void SwapRows()
+        {
+            if (assetRows[0].relativePosition.y + assetRows[0].size.y + 4.0f < 0.0f)
+            {
+                assetRows[0].relativePosition = new Vector3(0.0f, assetRows[3].relativePosition.y + assetRows[3].size.y + 4.0f);
+                var firstRealRow = (int)Mathf.Floor(scrollPositionY/(assetRows[0].size.y+4.0f));
+                var lastRealRow = firstRealRow + 3;
+                DrawAssets(0, lastRealRow);
+                ShiftRowsUp();
+            }
+            else if (assetRows[0].relativePosition.y > 0.0f)
+            {
+                assetRows[3].relativePosition = new Vector3(0.0f, assetRows[0].relativePosition.y - assetRows[3].size.y - 4.0f);
+                var firstRealRow = (int)Mathf.Floor(scrollPositionY / (assetRows[0].size.y + 4.0f));
+                DrawAssets(3, firstRealRow);
+                ShiftRowsDown();
+            }
+        }
+
+        private static void ShiftRowsUp()
+        {
+            var tmp = assetRows[0];
+            assetRows[0] = assetRows[1];
+            assetRows[1] = assetRows[2];
+            assetRows[2] = assetRows[3];
+            assetRows[3] = tmp;
+        }
+
+        private static void ShiftRowsDown()
+        {
+            var tmp = assetRows[3];
+            assetRows[3] = assetRows[2];
+            assetRows[2] = assetRows[1];
+            assetRows[1] = assetRows[0];
+            assetRows[0] = tmp;
+        }
+
         private static void ScrollAssetsList(float value)
+        {
+            var scrollbar =
+                GameObject.Find("AssetsList")
+                    .transform.parent.GetComponent<UIComponent>()
+                    .Find<UIScrollbar>("Scrollbar");
+
+            scrollbar.value = value;
+        }
+
+        private static void SetScrollBar(float maxValue, float scrollSize, float value = 0.0f)
+        {
+            var scrollbar =
+                GameObject.Find("AssetsList")
+                    .transform.parent.GetComponent<UIComponent>()
+                    .Find<UIScrollbar>("Scrollbar");
+
+            scrollbar.maxValue = maxValue;
+            scrollbar.scrollSize = scrollSize;
+            scrollbar.value = value;
+        }
+
+        private static void SetScrollBar(float value = 0.0f)
         {
             var scrollbar =
                 GameObject.Find("AssetsList")
@@ -480,8 +609,6 @@ namespace ImprovedAssetsPanel
                 packageEntry.RequestDetails();
             }
         }
-
-        private static Dictionary<Package.Asset, AssetType> _assetTypeCache = new Dictionary<Package.Asset, AssetType>(); 
 
         private static AssetType GetAssetType(Package.Asset asset)
         {
@@ -681,8 +808,6 @@ namespace ImprovedAssetsPanel
             return false;
         }
 
-        private static List<Package.Asset> _cachedAssets = new List<Package.Asset>();
-
         private static void PreCacheAssets()
         {
             var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList();
@@ -695,15 +820,15 @@ namespace ImprovedAssetsPanel
 
             if (filterMode == AssetType.All)
             {
-                _cachedAssets = assets;
+                _assetCache = assets;
             }
             else if (filterMode == AssetType.Favorite)
             {
-                _cachedAssets = assets.FindAll(asset => config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64));
+                _assetCache = assets.FindAll(asset => config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64));
             }
             else
             {
-                _cachedAssets = assets.FindAll(asset => GetAssetType(asset) == filterMode);
+                _assetCache = assets.FindAll(asset => GetAssetType(asset) == filterMode);
             }
         }
 
@@ -711,7 +836,7 @@ namespace ImprovedAssetsPanel
         {
             if (sortMode == SortMode.Alphabetical)
             {
-                _cachedAssets.Sort((a, b) =>
+                _assetCache.Sort((a, b) =>
                 {
                     if (a.name == null)
                     {
@@ -728,82 +853,71 @@ namespace ImprovedAssetsPanel
             }
             else if (sortMode == SortMode.LastUpdated)
             {
-                _cachedAssets.Sort((a, b) => GetAssetLastModifiedDelta(a).CompareTo(GetAssetLastModifiedDelta(b)));
+                _assetCache.Sort((a, b) => GetAssetLastModifiedDelta(a).CompareTo(GetAssetLastModifiedDelta(b)));
             }
             else if (sortMode == SortMode.LastSubscribed)
             {
-                _cachedAssets.Sort((a, b) => GetAssetCreatedDelta(a).CompareTo(GetAssetCreatedDelta(b)));
+                _assetCache.Sort((a, b) => GetAssetCreatedDelta(a).CompareTo(GetAssetCreatedDelta(b)));
             }
             else if (sortMode == SortMode.Active)
             {
                 var active = new List<Package.Asset>();
                 var inactive = new List<Package.Asset>();
-                foreach (var asset in _cachedAssets)
+                foreach (var asset in _assetCache)
                 {
                     if(asset.isEnabled) active.Add(asset);
                     else inactive.Add(asset);
                 }
 
-                _cachedAssets.Clear();
-                foreach (var asset in active) _cachedAssets.Add(asset);
-                foreach (var asset in inactive) _cachedAssets.Add(asset);
+                _assetCache.Clear();
+                foreach (var asset in active) _assetCache.Add(asset);
+                foreach (var asset in inactive) _assetCache.Add(asset);
             }
             else if (sortMode == SortMode.Favorite)
             {
                 var favorite = new List<Package.Asset>();
                 var nonfavorite = new List<Package.Asset>();
-                foreach (var asset in _cachedAssets)
+                foreach (var asset in _assetCache)
                 {
                     if (config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64)) favorite.Add(asset);
                     else nonfavorite.Add(asset);
                 }
 
-                _cachedAssets.Clear();
-                foreach (var asset in favorite) _cachedAssets.Add(asset);
-                foreach (var asset in nonfavorite) _cachedAssets.Add(asset);
+                _assetCache.Clear();
+                foreach (var asset in favorite) _assetCache.Add(asset);
+                foreach (var asset in nonfavorite) _assetCache.Add(asset);
             }
         }
 
-        private static int currentPanelId = 0;
-
-        private static void DrawAssets(CustomContentPanel customContentPanel, int row)
+        private static void DrawAssets(int virtualRow, int realRow)
         {
-            var component = customContentPanel.Find("AssetsList");
-
-            List<UIPanel> panels = new List<UIPanel>();
-            for (int i = 0; i < component.transform.childCount; i++)
+            if (virtualRow < 0 || virtualRow > 3)
             {
-                var panel = component.transform.GetChild(i).GetComponent<UIPanel>();
-                if (panel != null)
-                {
-                    panels.Add(panel);
-                }
+                Debug.LogError("DrawAssets(): virtualRow < 0 || virtualRow > 3 is true");
+                return;
             }
 
-            var panelSize = new Vector2(1200.0f, 226.0f);
-
-            UIPanel currentPanel = null;
-            if (currentPanelId < panels.Count)
+            var numRows = (int)Mathf.Ceil(_assetCache.Count/3.0f);
+            if (realRow > numRows - 1)
             {
-                currentPanel = panels[currentPanelId++];
-                currentPanel.isVisible = true;
-            }
-            else
-            {
-                currentPanel = component.AddUIComponent(typeof(UIPanel)) as UIPanel;
-                currentPanelId++;
-                currentPanel.size = panelSize;
+                return;
             }
 
-            var assetsCount = _cachedAssets.Count;
+            UIPanel currentPanel = assetRows[virtualRow];
+            for (int i = 0; i < currentPanel.transform.childCount; i++)
+            {
+                Destroy(currentPanel.transform.GetChild(i).gameObject);
+            }
+
+            var assetsCount = _assetCache.Count;
 
             float currentX = 0;
-            for (int i = row * 3; i < Mathf.Min((row + 1) * 3, assetsCount); i++)
+            for (int i = realRow*3; i < Mathf.Min((realRow+1)*3, assetsCount); i++)
             {
                 var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
 
-                var current = _cachedAssets[i];
+                var current = _assetCache[i];
 
                 packageEntry.entryName = String.Format("{0}.{1}\t({2})", current.package.packageName, current.name, current.type);
 
@@ -904,23 +1018,13 @@ namespace ImprovedAssetsPanel
         private static void RefreshAssetsList(CustomContentPanel customContentPanel, bool preCacheAssets)
         {
             UITemplateManager.ClearInstances(kAssetEntryTemplate);
-            var component = customContentPanel.Find("AssetsList");
 
-            if (filterMode == AssetType.ColorLUT)
+           /* if (filterMode == AssetType.ColorLUT)
             {
-                for (int i = 0; i < component.transform.childCount; i++)
-                {
-                    var panel = component.transform.GetChild(i).GetComponent<UIPanel>();
-                    if (panel != null)
-                    {
-                        panel.isVisible = false;
-                    }
-                }
-
                 foreach (var current in PackageManager.FilterAssets(UserAssetType.ColorCorrection))
                 {
                     var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
-                    component.AttachUIComponent(packageEntry.gameObject);
+                    newAssetsPanel.AttachUIComponent(packageEntry.gameObject);
                     packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
                         current.type, ")");
                     packageEntry.entryActive = current.isEnabled;
@@ -931,35 +1035,27 @@ namespace ImprovedAssetsPanel
                 }
 
                 return;
-            }
+            }*/
 
             PreCacheAssets();
             SortCachedAssets();
 
-            currentPanelId = 0;
+            float y = 0.0f;
 
-            DrawAssets(customContentPanel, 0);
-            DrawAssets(customContentPanel, 1);
-            DrawAssets(customContentPanel, 2);
- 
-            List<UIPanel> panels = new List<UIPanel>();
-            for (int i = 0; i < component.transform.childCount; i++)
+            for (int q = 0; q < 4; q++)
             {
-                var panel = component.transform.GetChild(i).GetComponent<UIPanel>();
-                if (panel != null)
-                {
-                    panels.Add(panel);
-                }
-            }
-            for (int i = currentPanelId; i < panels.Count; i++)
-            {
-                panels[i].isVisible = false;
+                assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
+                y += assetRows[q].size.y + 4;
             }
 
-            if (filterMode != AssetType.All)
-            {
-                return;
-            }
+            scrollPositionY = 0.0f;
+            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y + 4);
+            SetScrollBar(maxScrollPositionY, newAssetsPanel.size.y);
+
+            DrawAssets(0, 0);
+            DrawAssets(1, 1);
+            DrawAssets(2, 2);
+            DrawAssets(3, 3);
         }
 
         private static TimeSpan GetAssetLastModifiedDelta(Package.Asset asset)
