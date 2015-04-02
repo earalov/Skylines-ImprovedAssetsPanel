@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Policy;
 using ColossalFramework.Packaging;
 using ColossalFramework.UI;
 using UnityEngine;
@@ -93,66 +94,88 @@ namespace ImprovedAssetsPanel
         private static Dictionary<Package.Asset, AssetType> _assetTypeCache = new Dictionary<Package.Asset, AssetType>();
         private static List<Package.Asset> _assetCache = new List<Package.Asset>();
 
-        private static string GetSpriteNameForAssetType(AssetType assetType)
+        private static string GetSpriteNameForAssetType(AssetType assetType, bool hovered = false)
         {
             switch (assetType)
             {
                 case AssetType.Favorite:
+                    if (hovered) return "InfoIconHealthHovered";
                     return "InfoIconHealth";
                 case AssetType.Building:
-                    return "BuildingIcon";
+                    if (hovered) return "InfoIconOutsideConnectionsHovered";
+                    return "InfoIconOutsideConnectionsPressed";
                 case AssetType.Prop:
-                    return "IconAssetProp";
+                    if (hovered) return "ToolbarIconPropsHovered";
+                    return "ToolbarIconProps";
                 case AssetType.Tree:
+                    if (hovered) return "IconPolicyForestHovered";
                     return "IconPolicyForest";
                 case AssetType.Intersection:
-                    return "SubBarRoadsIntersection";
+                    if (hovered) return "ThumbnailJunctionsCloverFocused";
+                    return "ThumbnailJunctionsClover";
                 case AssetType.Park:
-                    return "SubBarBeautificationParksnPlazas";
+                    if (hovered) return "ToolbarIconBeautificationHovered";
+                    return "ToolbarIconBeautification";
                 case AssetType.Electricity:
-                    return "ToolbarIconElectricity";
+                    if (hovered) return "InfoIconElectricityHovered";
+                    return "InfoIconElectricity";
                 case AssetType.WaterAndSewage:
+                    if (hovered) return "InfoIconWaterHovered";
                     return "InfoIconWater";
                 case AssetType.Garbage:
+                    if (hovered) return "InfoIconGarbageHovered";
                     return "InfoIconGarbage";
                 case AssetType.Healthcare:
+                    if (hovered) return "ToolbarIconHealthcareHovered";
                     return "ToolbarIconHealthcare";
                 case AssetType.Deathcare:
+                    if (hovered) return "ToolbarIconHealthcareFocused";
                     return "ToolbarIconHealthcareDisabled";
                 case AssetType.FireDepartment:
-                    return "ToolbarIconFireDepartment";
+                    if (hovered) return "InfoIconFireSafetyHovered";
+                    return "InfoIconFireSafety";
                 case AssetType.PoliceDepartment:
+                    if (hovered) return "ToolbarIconPoliceHovered";
                     return "ToolbarIconPolice";
                 case AssetType.Education:
-                    return "ToolbarIconEducation";
+                    if (hovered) return "InfoIconEducationHovered";
+                    return "InfoIconEducation";
                 case AssetType.Transport:
-                    return "IconPolicyFreePublicTransport";
+                    if (hovered) return "ToolbarIconPublicTransportHovered";
+                    return "ToolbarIconPublicTransport";
                 case AssetType.TransportBus:
+                    if (hovered) return "SubBarPublicTransportBusHovered";
                     return "SubBarPublicTransportBus";
                 case AssetType.TransportMetro:
+                    if (hovered) return "SubBarPublicTransportMetroHovered";
                     return "SubBarPublicTransportMetro";
                 case AssetType.TransportTrain:
+                    if (hovered) return "SubBarPublicTransportTrainHovered";
                     return "SubBarPublicTransportTrain";
                 case AssetType.TransportShip:
+                    if (hovered) return "SubBarPublicTransportShipHovered";
                     return "SubBarPublicTransportShip";
                 case AssetType.TransportPlane:
+                    if (hovered) return "SubBarPublicTransportPlaneHovered";
                     return "SubBarPublicTransportPlane";
                 case AssetType.UniqueBuilding:
+                    if(hovered) return "InfoIconLevelHovered";
                     return "InfoIconLevelFocused";
                 case AssetType.Monument:
-                    return "FeatureMonumentLevel2";
+                    if (hovered) return "ToolbarIconMonumentsHovered";
+                    return "ToolbarIconMonuments";
                 case AssetType.Residential:
-                    return "BuildingIcon";
+                    if (hovered) return "InfoIconOutsideConnectionsHovered";
+                    return "InfoIconOutsideConnectionsPressed";
                 case AssetType.Commercial:
-                    return "BuildingIcon";
+                    if (hovered) return "InfoIconOutsideConnectionsHovered";
+                    return "InfoIconOutsideConnectionsPressed";
                 case AssetType.Industrial:
-                    return "BuildingIcon";
+                    if (hovered) return "InfoIconOutsideConnectionsHovered";
+                    return "InfoIconOutsideConnectionsPressed";
                 case AssetType.Office:
-                    return "BuildingIcon";
-                case AssetType.ColorLUT:
-                    return "BuildingIcon";
-                case AssetType.Unknown:
-                    return "BuildingIcon";
+                    if (hovered) return "InfoIconOutsideConnectionsHovered";
+                    return "InfoIconOutsideConnectionsPressed";
             }
 
             return "";
@@ -292,6 +315,9 @@ namespace ImprovedAssetsPanel
                 if (assetType != AssetType.ColorLUT && assetType != AssetType.All)
                 {
                     button.normalFgSprite = GetSpriteNameForAssetType(assetType);
+                    button.hoveredFgSprite = GetSpriteNameForAssetType(assetType, true);
+                    button.focusedFgSprite = button.normalFgSprite;
+                    button.pressedFgSprite = button.normalFgSprite;
                 }
                 else if(assetType == AssetType.ColorLUT)
                 {
@@ -316,7 +342,7 @@ namespace ImprovedAssetsPanel
                 }
                 else if (assetType == AssetType.Commercial)
                 {
-                    button.color = Color.blue;
+                    button.color = new Color32(100, 100, 255, 255);
                 }
                 else if (assetType == AssetType.Industrial)
                 {
@@ -988,6 +1014,9 @@ namespace ImprovedAssetsPanel
                 var favButton = panel.AddUIComponent<UIButton>();
                 favButton.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
                 favButton.normalFgSprite = "InfoIconHealth";
+                favButton.hoveredFgSprite = "InfoIconHealthHovered";
+                favButton.pressedFgSprite = "InfoIconHealthPressed";
+                favButton.focusedFgSprite = "InfoIconHealth";
                 favButton.size = new Vector2(36.0f, 36.0f);
                 favButton.relativePosition = new Vector3(362.0f, 164.0f);
                 favButton.opacity = config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64) ? 1.0f : 0.5f;
