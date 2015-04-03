@@ -19,6 +19,7 @@ namespace ImprovedAssetsPanel
             LastSubscribed = 2,
             Active = 3,
             Favorite = 4,
+            Location = 5,
         }
 
         private enum AssetType
@@ -92,6 +93,7 @@ namespace ImprovedAssetsPanel
         private static UIPanel[] assetRows;
 
         private static Dictionary<Package.Asset, AssetType> _assetTypeCache = new Dictionary<Package.Asset, AssetType>();
+        private static Dictionary<Package.Asset, string> _assetPathCache = new Dictionary<Package.Asset, string>();
         private static List<Package.Asset> _assetCache = new List<Package.Asset>();
 
         private static float scrollPositionY = 0.0f;
@@ -249,6 +251,7 @@ namespace ImprovedAssetsPanel
             assetRows = null;
 
             _assetTypeCache = new Dictionary<Package.Asset, AssetType>();
+            _assetPathCache = new Dictionary<Package.Asset, string>();
             _assetCache = new List<Package.Asset>();
 
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
@@ -642,6 +645,8 @@ namespace ImprovedAssetsPanel
                     return "Active";
                 case SortMode.Favorite:
                     return "Favorite";
+                case SortMode.Location:
+                    return "Location";
             }
 
             return "Unknown";
@@ -1012,6 +1017,13 @@ namespace ImprovedAssetsPanel
                 _assetCache.Clear();
                 foreach (var asset in favorite) _assetCache.Add(asset);
                 foreach (var asset in nonfavorite) _assetCache.Add(asset);
+            }
+            else if (sortMode == SortMode.Location)
+            {
+                _assetCache.Sort((a, b) =>
+                {
+                    return b.package.packagePath.CompareTo(a.package.packagePath);
+                });
             }
         }
 
