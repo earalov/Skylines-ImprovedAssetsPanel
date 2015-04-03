@@ -1334,7 +1334,7 @@ namespace ImprovedAssetsPanel
             }
 
             scrollPositionY = 0.0f;
-            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y) + 4.0f;
+            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y+2.0f);
             SetScrollBar(maxScrollPositionY, newAssetsPanel.size.y);
 
             DrawAssets(0, 0);
