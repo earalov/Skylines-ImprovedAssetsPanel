@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Policy;
+using ColossalFramework;
 using ColossalFramework.Packaging;
 using ColossalFramework.UI;
 using UnityEngine;
@@ -78,6 +79,9 @@ namespace ImprovedAssetsPanel
 
         private static UIPanel filterButtons;
         private static UIPanel sortDropDown;
+        private static UILabel sortLabel;
+        private static UIPanel additionalOptions;
+
         private static SortMode sortMode = SortMode.Alphabetical;
         private static AssetType filterMode = AssetType.All;
 
@@ -240,11 +244,15 @@ namespace ImprovedAssetsPanel
             assetsList.isVisible = true;
 
             Destroy(sortDropDown.gameObject);
+            Destroy(sortLabel.gameObject);
             Destroy(filterButtons.gameObject);
+            Destroy(additionalOptions.gameObject);
             Destroy(newAssetsPanel.gameObject);
 
             filterButtons = null;
+            additionalOptions = null;
             sortDropDown = null;
+            sortLabel = null;
             sortMode = SortMode.Alphabetical;
             filterMode = AssetType.All;
             newAssetsPanel = null;
@@ -277,6 +285,8 @@ namespace ImprovedAssetsPanel
                 return;
             }
 
+            var uiView = FindObjectOfType<UIView>();
+
             var moarLabel = moarGroup.Find<UILabel>("Moar");
             var moarButton = moarGroup.Find<UIButton>("Button");
 
@@ -290,11 +300,22 @@ namespace ImprovedAssetsPanel
             sortDropDown.transform.parent = moarGroup.transform;
             sortDropDown.name = "AssetsSortBy";
             sortDropDown.Find<UILabel>("Label").isVisible = false;
+            sortDropDown.size = new Vector2(150.0f, 24.0f);
+            sortDropDown.autoLayout = false;
+
+            sortLabel = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
+            sortLabel.transform.parent = sortDropDown.transform;
+            sortLabel.text = "Sort by";
+            sortLabel.AlignTo(sortDropDown, UIAlignAnchor.TopLeft);
+            sortLabel.relativePosition = new Vector3(0.0f, -2.0f, 0.0f);
+            sortLabel.textColor = Color.white;
+            sortLabel.textScale = 0.6f;
 
             var dropdown = sortDropDown.Find<UIDropDown>("ShadowsQuality");
             dropdown.name = "SortByDropDown";
-            dropdown.size = new Vector2(200.0f, 24.0f);
+            dropdown.size = new Vector2(150.0f, 24.0f);
             dropdown.textScale = 0.8f;
+            dropdown.relativePosition = new Vector3(0.0f, 8.0f, 0.0f);
 
             dropdown.eventSelectedIndexChanged += (component, value) =>
             {
@@ -312,11 +333,9 @@ namespace ImprovedAssetsPanel
             int i = 0;
             foreach (var value in enumValues)
             {
-                dropdown.items[i] = String.Format("Sort by: {0}", EnumToString((SortMode)value));
+                dropdown.items[i] = EnumToString((SortMode)value);
                 i++;
             }
-
-            var uiView = FindObjectOfType<UIView>();
 
             filterButtons = uiView.AddUIComponent(typeof (UIPanel)) as UIPanel;
             filterButtons.transform.parent = moarGroup.transform;
@@ -437,6 +456,52 @@ namespace ImprovedAssetsPanel
                 assetTypeLabels.Add(label);
             }
 
+            additionalOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
+            additionalOptions.transform.parent = moarGroup.transform;
+            additionalOptions.size = new Vector2(120.0f, 32.0f);
+
+            var activateAll = additionalOptions.AddUIComponent<UIButton>();
+            activateAll.size = new Vector2(110.0f, 16.0f);
+            activateAll.text = "Activate all";
+            activateAll.textScale = 0.7f;
+            activateAll.normalBgSprite = "ButtonMenu";
+            activateAll.disabledBgSprite = "ButtonMenuDisabled";
+            activateAll.hoveredBgSprite = "ButtonMenuHovered";
+            activateAll.focusedBgSprite = "ButtonMenu";
+            activateAll.pressedBgSprite = "ButtonMenuPressed";
+            activateAll.AlignTo(additionalOptions, UIAlignAnchor.TopLeft);
+            activateAll.relativePosition = new Vector3(4.0f, 0.0f);
+            activateAll.eventClick += (component, param) =>
+            {
+                foreach (var item in _assetCache)
+                {
+                    item.isEnabled = true;
+                }
+
+                RefreshOnlyAssetsList();
+            };
+
+            var deactivateAll = additionalOptions.AddUIComponent<UIButton>();
+            deactivateAll.size = new Vector2(110.0f, 16.0f);
+            deactivateAll.text = "Deactivate all";
+            deactivateAll.textScale = 0.7f;
+            deactivateAll.normalBgSprite = "ButtonMenu";
+            deactivateAll.disabledBgSprite = "ButtonMenuDisabled";
+            deactivateAll.hoveredBgSprite = "ButtonMenuHovered";
+            deactivateAll.focusedBgSprite = "ButtonMenu";
+            deactivateAll.pressedBgSprite = "ButtonMenuPressed";
+            deactivateAll.AlignTo(additionalOptions, UIAlignAnchor.TopLeft);
+            deactivateAll.relativePosition = new Vector3(4.0f, 18.0f);
+            deactivateAll.eventClick += (component, param) =>
+            {
+                foreach (var item in _assetCache)
+                {
+                    item.isEnabled = false;
+                }
+
+                RefreshOnlyAssetsList();
+            };
+
             assetsList.verticalScrollbar = null;
             assetsList.isVisible = false;
 
@@ -455,7 +520,7 @@ namespace ImprovedAssetsPanel
                 }
 
                 var originalScrollPos = scrollPositionY;
-                scrollPositionY -= param.wheelDelta * 64.0f;
+                scrollPositionY -= param.wheelDelta * 80.0f;
                 scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY-newAssetsPanel.size.y);
 
                 ScrollRows(originalScrollPos - scrollPositionY);
@@ -476,8 +541,58 @@ namespace ImprovedAssetsPanel
                 y += assetRows[q].size.y;
             }
 
+            scrollbar.eventMouseUp += (component, param) =>
+            {
+                if (!newAssetsPanel.isVisible)
+                {
+                    return;
+                }
+
+                if (scrollbar.value != scrollPositionY)
+                {
+                    if (rowCount <= 2)
+                    {
+                        return;
+                    }
+
+                    var originalScrollPos = scrollPositionY;
+                    scrollPositionY = scrollbar.value;
+                    scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY - newAssetsPanel.size.y);
+
+                    if (scrollPositionY != originalScrollPos)
+                    {
+                        var viewSize = newAssetsPanel.size.y;
+
+                        var realRowIndex = (int)Mathf.Floor((scrollPositionY / viewSize) * (viewSize / assetRows[0].size.y));
+                        var diff = scrollPositionY - realRowIndex * assetRows[0].size.y;
+
+                        float _y = 0.0f;
+                        for (int q = 0; q < 4; q++)
+                        {
+                            assetRows[q].relativePosition = new Vector3(0.0f, _y, 0.0f);
+                            _y += assetRows[q].size.y + 2.0f;
+                        }
+
+                        var rowsCount = (int)Mathf.Ceil(_assetCache.Count / 3.0f);
+
+                        for (int q = 0; q < Mathf.Min(rowsCount, 4); q++)
+                        {
+                            DrawAssets(q, realRowIndex + q);
+                        }
+
+                        ScrollRows(-diff);
+                        SetScrollBar(scrollPositionY);
+                    }
+                }
+            };
+
             scrollbar.eventValueChanged += (component, value) =>
             {
+                if (Input.GetMouseButton(0))
+                {
+                    return;
+                }
+
                 if (!newAssetsPanel.isVisible)
                 {
                     return;
@@ -503,7 +618,6 @@ namespace ImprovedAssetsPanel
                 }
             };
         }
-
 
         private static void SetAssetCountLabels()
         {
@@ -1022,7 +1136,24 @@ namespace ImprovedAssetsPanel
             {
                 _assetCache.Sort((a, b) =>
                 {
-                    return b.package.packagePath.CompareTo(a.package.packagePath);
+                    var aIsWorkshop = a.package.packagePath.Contains("workshop");
+                    var bIsWorkshop = b.package.packagePath.Contains("workshop");
+                    if (aIsWorkshop && bIsWorkshop)
+                    {
+                        return a.name.CompareTo(b.name);
+                    }
+
+                    if (aIsWorkshop)
+                    {
+                        return 1;
+                    }
+
+                    if (bIsWorkshop)
+                    {
+                        return -1;
+                    }
+
+                    return a.name.CompareTo(b.name);
                 });
             }
         }
@@ -1203,7 +1334,7 @@ namespace ImprovedAssetsPanel
             }
 
             scrollPositionY = 0.0f;
-            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y + 2.0f);
+            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y) + 4.0f;
             SetScrollBar(maxScrollPositionY, newAssetsPanel.size.y);
 
             DrawAssets(0, 0);
