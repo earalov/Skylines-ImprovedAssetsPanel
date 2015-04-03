@@ -563,8 +563,8 @@ namespace ImprovedAssetsPanel
                     {
                         var viewSize = newAssetsPanel.size.y;
 
-                        var realRowIndex = (int)Mathf.Floor((scrollPositionY / viewSize) * (viewSize / assetRows[0].size.y));
-                        var diff = scrollPositionY - realRowIndex * assetRows[0].size.y;
+                        var realRowIndex = (int)Mathf.Floor((scrollPositionY / viewSize) * (viewSize / (assetRows[0].size.y+2.0f)));
+                        var diff = scrollPositionY - realRowIndex * (assetRows[0].size.y+2.0f);
 
                         float _y = 0.0f;
                         for (int q = 0; q < 4; q++)
