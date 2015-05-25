@@ -11,7 +11,7 @@ namespace ImprovedAssetsPanel
             get
             {
                 ImprovedAssetsPanel.Bootstrap();
-                return "ImprovedAssetsPanel"; 
+                return "ImprovedAssetsPanel [Fixed for v1.1]"; 
             }
         }
 
