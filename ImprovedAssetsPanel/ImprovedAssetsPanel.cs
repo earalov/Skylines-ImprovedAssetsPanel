@@ -97,8 +97,7 @@ namespace ImprovedAssetsPanel
         private static UIPanel filterButtons;
         private static UIPanel sortModePanel;
         private static UILabel sortModeLabel;
-        private static UIPanel sortOrderPanel;
-        private static UILabel sortOrderLabel;
+        private static UIButton sortOrderButton;
         private static UIPanel sortOptions;
         private static UIPanel additionalOptions;
 
@@ -267,8 +266,7 @@ namespace ImprovedAssetsPanel
 
             Destroy(sortModePanel.gameObject);
             Destroy(sortModeLabel.gameObject);
-            Destroy(sortOrderPanel.gameObject);
-            Destroy(sortOrderLabel.gameObject);
+            Destroy(sortOrderButton.gameObject);
             Destroy(filterButtons.gameObject);
             Destroy(additionalOptions.gameObject);
             Destroy(sortOptions.gameObject);
@@ -279,8 +277,7 @@ namespace ImprovedAssetsPanel
             sortOptions = null;
             sortModePanel = null;
             sortModeLabel = null;
-            sortOrderPanel = null;
-            sortOrderLabel = null;
+            sortOrderButton = null;
             sortMode = SortMode.Alphabetical;
             filterMode = AssetType.All;
             sortOrder = SortOrder.Ascending;
@@ -536,7 +533,33 @@ namespace ImprovedAssetsPanel
                 RefreshAssets();
             };
 
-            //TODO(earalov): reduce copy paste
+            sortOrderButton = sortModePanel.AddUIComponent<UIButton>();
+            sortOrderButton.transform.parent = sortOptions.transform;
+            sortOrderButton.AlignTo(sortOptions, UIAlignAnchor.TopLeft);
+            sortOrderButton.size = new Vector2(120.0f, 16.0f);
+            sortOrderButton.text = Util.GetEnumDescription<SortOrder>(sortOrder);
+            sortOrderButton.textScale = 0.7f;
+            sortOrderButton.normalBgSprite = "ButtonMenu";
+            sortOrderButton.disabledBgSprite = "ButtonMenuDisabled";
+            sortOrderButton.hoveredBgSprite = "ButtonMenuHovered";
+            sortOrderButton.focusedBgSprite = "ButtonMenu";
+            sortOrderButton.pressedBgSprite = "ButtonMenuPressed";
+            sortOrderButton.AlignTo(sortOptions, UIAlignAnchor.TopLeft);
+            sortOrderButton.relativePosition = new Vector3(0.0f, 16.0f);
+            sortOrderButton.eventClick += (component, param) =>
+            {
+                if (sortOrder == SortOrder.Ascending)
+                {
+                    sortOrder = SortOrder.Descending;
+                } else if (sortOrder == SortOrder.Descending)
+                {
+                    sortOrder = SortOrder.Ascending;
+                }
+                sortOrderButton.text = Util.GetEnumDescription<SortOrder>(sortOrder);
+                RefreshAssets();
+            };
+
+            //TODO(earalov): Fix me. Use combobox for asc/desc if possible. At this moment it's displayed but is unresponsive
             /*sortOrderPanel = GameObject.Instantiate(shadows);
             sortOrderPanel.gameObject.name = "AssetsSortOrder";
             sortOrderPanel.transform.parent = sortOptions.transform;
@@ -971,14 +994,19 @@ namespace ImprovedAssetsPanel
             return haystack.Contains(needle);
         }
 
-        private static void PreCacheAssets()
+        private static void ReIndexAssets(List<Package.Asset> assets)
         {
-            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList();
             _assetTypeIndex.Clear();
             foreach (var asset in assets)
             {
                 IndexAssetType(asset);
             }
+        }
+
+        private static void PreCacheAssets()
+        {
+            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList();
+            ReIndexAssets(assets);
 
             if (filterMode == AssetType.All)
             {
@@ -1178,6 +1206,8 @@ namespace ImprovedAssetsPanel
                     }
 
                     SaveConfig();
+                    ReIndexAssets(_assetCache);
+                    SetAssetCountLabels();
                 };
 
                 var onOff = active.Find<UILabel>("OnOff");
