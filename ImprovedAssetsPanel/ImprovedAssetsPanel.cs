@@ -8,6 +8,7 @@ using ColossalFramework;
 using ColossalFramework.Packaging;
 using ColossalFramework.UI;
 using UnityEngine;
+using System.ComponentModel;
 
 namespace ImprovedAssetsPanel
 {
@@ -15,12 +16,27 @@ namespace ImprovedAssetsPanel
     {
         private enum SortMode
         {
+            [Description("Name")]
             Alphabetical = 0,
+            [Description("Last updated")]
             LastUpdated = 1,
+            [Description("Last subscribed")]
             LastSubscribed = 2,
+            [Description("Active")]
             Active = 3,
+            [Description("Favorite")]
             Favorite = 4,
+            [Description("Location")]
             Location = 5,
+        }
+
+
+        private enum SortOrder
+        {
+            [Description("Asc.")]
+            Ascending = 0,
+            [Description("Desc.")]
+            Descending = 1
         }
 
         private enum AssetType
@@ -81,10 +97,13 @@ namespace ImprovedAssetsPanel
         private static UIPanel filterButtons;
         private static UIPanel sortDropDown;
         private static UILabel sortLabel;
+        private static UIPanel orderDropDown;
+        private static UILabel orderLabel;
         private static UIPanel additionalOptions;
 
         private static SortMode sortMode = SortMode.Alphabetical;
         private static AssetType filterMode = AssetType.All;
+        private static SortOrder sortOrder = SortOrder.Ascending;
 
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
 
@@ -271,6 +290,30 @@ namespace ImprovedAssetsPanel
             }
         }
 
+
+        private static UIDropDown InitializeDropDown<T>(UIPanel dropDownPanel, string name)
+        {
+            var dropdown = dropDownPanel.Find<UIDropDown>("ShadowsQuality");
+            dropdown.name = name;
+            dropdown.size = new Vector2(150.0f, 24.0f);
+            dropdown.textScale = 0.8f;
+            dropdown.relativePosition = new Vector3(0.0f, 8.0f, 0.0f);
+
+            var sprite = dropdown.Find<UIButton>("Sprite");
+            sprite.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
+
+            var enumValues = Enum.GetValues(typeof(T));
+            dropdown.items = new string[enumValues.Length];
+
+            int i = 0;
+            foreach (var value in enumValues)
+            {
+                dropdown.items[i] = Util.GetEnumDescription<T>((T)value);
+                i++;
+            }
+            return dropdown;
+        }
+
         private static void Initialize()
         {
             var shadows = GameObject.Find("Shadows").GetComponent<UIPanel>();
@@ -313,31 +356,13 @@ namespace ImprovedAssetsPanel
             sortLabel.textColor = Color.white;
             sortLabel.textScale = 0.6f;
 
-            var dropdown = sortDropDown.Find<UIDropDown>("ShadowsQuality");
-            dropdown.name = "SortByDropDown";
-            dropdown.size = new Vector2(150.0f, 24.0f);
-            dropdown.textScale = 0.8f;
-            dropdown.relativePosition = new Vector3(0.0f, 8.0f, 0.0f);
-
+            var dropdown = InitializeDropDown<SortMode>(sortDropDown, "SortByDropDown");
             dropdown.eventSelectedIndexChanged += (component, value) =>
             {
                 sortMode = (SortMode)value;
                 ScrollAssetsList(0.0f);
                 RefreshAssets();
             };
-
-            var sprite = dropdown.Find<UIButton>("Sprite");
-            sprite.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
-
-            var enumValues = Enum.GetValues(typeof(SortMode));
-            dropdown.items = new string[enumValues.Length];
-
-            int i = 0;
-            foreach (var value in enumValues)
-            {
-                dropdown.items[i] = EnumToString((SortMode)value);
-                i++;
-            }
 
             filterButtons = uiView.AddUIComponent(typeof (UIPanel)) as UIPanel;
             filterButtons.transform.parent = moarGroup.transform;
@@ -730,27 +755,6 @@ namespace ImprovedAssetsPanel
                     .Find<UIScrollbar>("Scrollbar");
 
             scrollbar.value = value;
-        }
-
-        private static string EnumToString(SortMode mode)
-        {
-            switch (mode)
-            {
-                case SortMode.Alphabetical:
-                    return "Name";
-                case SortMode.LastSubscribed:
-                    return "Last subscribed";
-                case SortMode.LastUpdated:
-                    return "Last updated";
-                case SortMode.Active:
-                    return "Active";
-                case SortMode.Favorite:
-                    return "Favorite";
-                case SortMode.Location:
-                    return "Location";
-            }
-
-            return "Unknown";
         }
 
          private static AssetType GetAssetType(Package.Asset asset)
