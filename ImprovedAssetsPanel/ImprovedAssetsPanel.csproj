@@ -48,6 +48,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MultiMap.cs" />
+    <Compile Include="FunctionalComparer.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="DateTimeUtil.cs" />
     <Compile Include="Detours.cs" />
