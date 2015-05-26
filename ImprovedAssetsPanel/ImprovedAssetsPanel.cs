@@ -86,13 +86,10 @@ namespace ImprovedAssetsPanel
         private static SortMode sortMode = SortMode.Alphabetical;
         private static AssetType filterMode = AssetType.All;
 
-        private static readonly string kEntryTemplate = "EntryTemplate";
-        private static readonly string kMapEntryTemplate = "MapEntryTemplate";
-        private static readonly string kSaveEntryTemplate = "SaveEntryTemplate";
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
 
         private static List<UIButton> assetTypeButtons;
-        private static List<UILabel> assetTypeLabels; 
+        private static Dictionary<AssetType, UILabel> assetTypeLabels = new Dictionary<AssetType,UILabel>(); 
 
         private static UIPanel newAssetsPanel;
         private static UIPanel[] assetRows;
@@ -326,7 +323,7 @@ namespace ImprovedAssetsPanel
             {
                 sortMode = (SortMode)value;
                 ScrollAssetsList(0.0f);
-                RefreshOnlyAssetsList();
+                RefreshAssets();
             };
 
             var sprite = dropdown.Find<UIButton>("Sprite");
@@ -357,7 +354,6 @@ namespace ImprovedAssetsPanel
                     .Find<UIScrollbar>("Scrollbar");
 
             assetTypeButtons = new List<UIButton>();
-            assetTypeLabels = new List<UILabel>();
 
             float x = 0.0f;
             foreach (var assetType in assetTypes)
@@ -423,18 +419,10 @@ namespace ImprovedAssetsPanel
                 {
                     filterMode = assetType;
 
-                    /*if (filterMode == AssetType.ColorLUT)
-                    {
-                        assetsList.isVisible = true;
-                        assetsList.verticalScrollbar = scrollbar;
-                        newAssetsPanel.isVisible = false;
-                    }
-                    else
-                    {*/
-                        assetsList.isVisible = false;
-                        assetsList.verticalScrollbar = null;
-                        newAssetsPanel.isVisible = true;
- //                   }
+                    //TODO(earalov): call these three lines only on bootstrap
+                    assetsList.isVisible = false;
+                    assetsList.verticalScrollbar = null;
+                    newAssetsPanel.isVisible = true;
 
                     foreach (var item in assetTypeButtons)
                     {
@@ -443,7 +431,7 @@ namespace ImprovedAssetsPanel
 
                     button.opacity = 1.0f;
                     ScrollAssetsList(0.0f);
-                    RefreshOnlyAssetsList();
+                    RefreshAssets();
                 };
 
                 assetTypeButtons.Add(button);
@@ -455,7 +443,7 @@ namespace ImprovedAssetsPanel
                 label.zOrder = 7;
                 label.textScale = 0.5f;
                 label.textColor = Color.white;
-                assetTypeLabels.Add(label);
+                assetTypeLabels.Add(assetType, label);
             }
 
             additionalOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
@@ -480,7 +468,7 @@ namespace ImprovedAssetsPanel
                     item.isEnabled = true;
                 }
 
-                RefreshOnlyAssetsList();
+                RefreshAssets();
             };
 
             var deactivateAll = additionalOptions.AddUIComponent<UIButton>();
@@ -501,7 +489,7 @@ namespace ImprovedAssetsPanel
                     item.isEnabled = false;
                 }
 
-                RefreshOnlyAssetsList();
+                RefreshAssets();
             };
 
             assetsList.verticalScrollbar = null;
@@ -623,46 +611,34 @@ namespace ImprovedAssetsPanel
 
         private static void SetAssetCountLabels()
         {
-            var assetTypes = (AssetType[])Enum.GetValues(typeof (AssetType));
 
-            int i = 0;
-            foreach (var label in assetTypeLabels)
+            foreach (var assetType in assetTypeLabels.Keys)
             {
-                int count = 0;
-
-               /* if (assetTypes[i] == AssetType.ColorLUT)
-                {
-                    label.text = PackageManager.FilterAssets(UserAssetType.ColorCorrection).Count().ToString();
-                    i++;
-                    continue;
-                }*/
-
-                if (assetTypes[i] == AssetType.All)
+                var label = assetTypeLabels[assetType];
+                if (assetType == AssetType.All)
                 {
                     label.text = _assetTypeCache.Count.ToString();
-                    i++;
                     continue;
                 }
-
-                if (assetTypes[i] == AssetType.Favorite)
+                if (assetType == AssetType.Favorite)
                 {
                     label.text = config.favoriteAssets.Count.ToString();
-                    i++;
                     continue;
                 }
+                int count = 0;
 
                 foreach (var item in _assetTypeCache)
                 {
-                    if (item.Value == assetTypes[i])
+                    if (item.Value == assetType)
                     {
                         count++;
                     }
                 }
-
                 label.text = count.ToString();
-                i++;
+                
             }
         }
+    
 
         private static int rowCount
         {
@@ -777,100 +753,7 @@ namespace ImprovedAssetsPanel
             return "Unknown";
         }
 
-        public static void RefreshAssets()
-        {
-            var ContentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
-            //RefreshAllAssetsList(ContentManagerPanel);
-            //RefreshPackagesList(ContentManagerPanel);
-            //RefreshMapsList(ContentManagerPanel);
-            //RefreshSavesList(ContentManagerPanel);
-            RefreshAssetsList(ContentManagerPanel, true);
-        }
-
-        public static void RefreshOnlyAssetsList()
-        {
-            var ContentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
-            RefreshAssetsList(ContentManagerPanel, false);
-        }
-
-        private static void RefreshAllAssetsList(ContentManagerPanel ContentManagerPanel)
-        {
-            UITemplateManager.ClearInstances(kEntryTemplate);
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            var component = categoryContainer.Find("AllAssets").Find("Content");
-            if (component.isEnabled)
-            {
-                foreach (var current in PackageManager.allPackages)
-                {
-                    foreach (Package.Asset asset in current)
-                    {
-                        var packageEntry = UITemplateManager.Get<PackageEntry>(kEntryTemplate);
-                        component.AttachUIComponent(packageEntry.gameObject);
-                        packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(",
-                            asset.type, ")");
-                        packageEntry.entryActive = true;
-                        packageEntry.package = current;
-                    }
-                }
-            }
-        }
-
-        private static void RefreshPackagesList(ContentManagerPanel ContentManagerPanel)
-        {
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            var component = categoryContainer.Find("AllPackages").Find("Content");
-            if (component.isEnabled)
-            {
-                foreach (var current in PackageManager.allPackages)
-                {
-                    var packageEntry = UITemplateManager.Get<PackageEntry>(kEntryTemplate);
-                    component.AttachUIComponent(packageEntry.gameObject);
-                    packageEntry.entryName = current.packageName;
-                    packageEntry.entryActive = true;
-                    packageEntry.package = current;
-                }
-            }
-        }
-
-        private static void RefreshMapsList(ContentManagerPanel ContentManagerPanel)
-        {
-            UITemplateManager.ClearInstances(kMapEntryTemplate);
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            var component = categoryContainer.Find("Maps").Find("Content");
-            foreach (var current in PackageManager.FilterAssets(UserAssetType.MapMetaData))
-            {
-                var packageEntry = UITemplateManager.Get<PackageEntry>(kMapEntryTemplate);
-                component.AttachUIComponent(packageEntry.gameObject);
-                packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
-                    current.type, ")");
-                packageEntry.entryActive = current.isEnabled;
-                packageEntry.package = current.package;
-                packageEntry.asset = current;
-                packageEntry.publishedFileId = current.package.GetPublishedFileID();
-                packageEntry.RequestDetails();
-            }
-        }
-
-        private static void RefreshSavesList(ContentManagerPanel ContentManagerPanel)
-        {
-            UITemplateManager.ClearInstances(kSaveEntryTemplate);
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            var component = categoryContainer.Find("Saves").Find("Content");
-            foreach (var current in PackageManager.FilterAssets(UserAssetType.SaveGameMetaData))
-            {
-                var packageEntry = UITemplateManager.Get<PackageEntry>(kSaveEntryTemplate);
-                component.AttachUIComponent(packageEntry.gameObject);
-                packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
-                    current.type, ")");
-                packageEntry.entryActive = current.isEnabled;
-                packageEntry.package = current.package;
-                packageEntry.asset = current;
-                packageEntry.publishedFileId = current.package.GetPublishedFileID();
-                packageEntry.RequestDetails();
-            }
-        }
-
-        private static AssetType GetAssetType(Package.Asset asset)
+         private static AssetType GetAssetType(Package.Asset asset)
         {
             if (_assetTypeCache.ContainsKey(asset))
             {
@@ -1063,15 +946,6 @@ namespace ImprovedAssetsPanel
 
         private static bool ContainsTag(string[] haystack, string needle)
         {
-            /*           foreach (var item in haystack)
-                       {
-                           if (item == needle)
-                           {
-                               return true;
-                           }
-                       return false;
- 
-              }*/
             if (needle == null || haystack == null)
             {
                 return false;
@@ -1295,29 +1169,12 @@ namespace ImprovedAssetsPanel
 
                 var onOff = active.Find<UILabel>("OnOff");
                 onOff.enabled = false;
-                /*onOff.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
-                onOff.textColor = Color.white;
-                onOff.textScale = 0.75f;
-                onOff.text = "Active";
-                onOff.relativePosition = new Vector3(-34.0f, 5.0f, onOff.relativePosition.z);
-                onOff.zOrder = 7;*/
 
                 var view = panel.Find<UIButton>("View");
                 view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
                 view.zOrder = 7;
                 view.size = new Vector2(32.0f, 32.0f);
-                view.textScale = 0.7f;
                 view.relativePosition = new Vector3(4.0f, panelSizeY - 34.0f, view.relativePosition.z);
-                view.text = "";
-                /*view.normalFgSprite = "Options";
-                view.normalBgSprite = "";
-                view.hoveredFgSprite = "OptionsHovered";
-                view.hoveredBgSprite = "";
-                view.focusedFgSprite = "OptionsFocused";
-                view.focusedBgSprite = "";
-                view.pressedFgSprite = "OptionsPressed";
-                view.pressedBgSprite = "";*/
-                view.tooltip = "View in Workshop";
 
                 var share = panel.Find<UIButton>("Share");
                 share.zOrder = 7;
@@ -1327,30 +1184,29 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        private static void RefreshAssetsList(ContentManagerPanel ContentManagerPanel, bool preCacheAssets)
+        private static void RefreshColorCorrectionsList()
+        {
+            foreach (var current in PackageManager.FilterAssets(UserAssetType.ColorCorrection))
+            {
+                UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+                var assetsList = categoryContainer.Find("ColorCorrections").Find("Content");
+                var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
+                assetsList.AttachUIComponent(packageEntry.gameObject);
+                packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
+                    current.type, ")");
+                packageEntry.entryActive = current.isEnabled;
+                packageEntry.package = current.package;
+                packageEntry.asset = current;
+
+                packageEntry.RequestDetails();
+            }
+        }
+
+        public static void RefreshAssets()
         {
             UITemplateManager.ClearInstances(kAssetEntryTemplate);
 
- //           if (filterMode == AssetType.ColorLUT)
- //           {
-                foreach (var current in PackageManager.FilterAssets(UserAssetType.ColorCorrection))
-                {
-                    UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-                    var assetsList = categoryContainer.Find("ColorCorrections").Find("Content");
-                    var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
-                    assetsList.AttachUIComponent(packageEntry.gameObject);
-                    packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
-                        current.type, ")");
-                    packageEntry.entryActive = current.isEnabled;
-                    packageEntry.package = current.package;
-                    packageEntry.asset = current;
-
-                    packageEntry.RequestDetails();
-                }
-
-//                return;
-//            }
-
+            RefreshColorCorrectionsList();
             PreCacheAssets();
             SortCachedAssets();
             SetAssetCountLabels();
