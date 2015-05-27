@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Policy;
-using ColossalFramework;
 using ColossalFramework.Packaging;
 using ColossalFramework.UI;
 using UnityEngine;
@@ -68,160 +66,128 @@ namespace ImprovedAssetsPanel
             TransportPlane,
             UniqueBuilding,
             Monument,
-            ColorLUT,
+            ColorLut,
             Vehicle,
             Unknown,
         }
 
-        private static readonly string configPath = "ImprovedAssetsPanelConfig.xml";
-        private static Configuration config = new Configuration();
+        private const string ConfigPath = "ImprovedAssetsPanelConfig.xml";
+        private static Configuration _config = new Configuration();
 
         private static void LoadConfig()
         {
-            config = Configuration.Deserialize(configPath);
-            if (config == null)
-            {
-                config = new Configuration();
-                SaveConfig();
-            }
+            _config = Configuration.Deserialize(ConfigPath);
+            if (_config != null) return;
+            _config = new Configuration();
+            SaveConfig();
         }
 
         private static void SaveConfig()
         {
-            if (config != null)
+            if (_config != null)
             {
-                Configuration.Serialize(configPath, config);
+                Configuration.Serialize(ConfigPath, _config);
             }
         }
 
-        private static UIPanel filterButtons;
-        private static UIPanel sortModePanel;
-        private static UILabel sortModeLabel;
-        private static UIButton sortOrderButton;
-        private static UILabel sortOrderLabel;
-        private static UIPanel sortOptions;
-        private static UIPanel additionalOptions;
+        private static UIPanel _filterButtons;
+        private static UIPanel _sortModePanel;
+        private static UILabel _sortModeLabel;
+        private static UIButton _sortOrderButton;
+        private static UILabel _sortOrderLabel;
+        private static UIPanel _sortOptions;
+        private static UIPanel _additionalOptions;
 
-        private static SortMode sortMode = SortMode.Alphabetical;
-        private static AssetType filterMode = AssetType.All;
-        private static SortOrder sortOrder = SortOrder.Ascending;
+        private static SortMode _sortMode = SortMode.Alphabetical;
+        private static AssetType _filterMode = AssetType.All;
+        private static SortOrder _sortOrder = SortOrder.Ascending;
 
-        private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
+        private const string KAssetEntryTemplate = "AssetEntryTemplate";
 
-        private static List<UIButton> assetTypeButtons = new List<UIButton>();
-        private static Dictionary<AssetType, UILabel> assetTypeLabels = new Dictionary<AssetType, UILabel>();
+        private static List<UIButton> _assetTypeButtons = new List<UIButton>();
+        private static Dictionary<AssetType, UILabel> _assetTypeLabels = new Dictionary<AssetType, UILabel>();
 
-        private static UIPanel newAssetsPanel;
-        private static UIPanel[] assetRows;
+        private static UIPanel _newAssetsPanel;
+        private static UIPanel[] _assetRows;
 
         private static MultiMap<Package.Asset, AssetType> _assetTypeIndex = new MultiMap<Package.Asset, AssetType>();
         private static Dictionary<Package.Asset, string> _assetPathCache = new Dictionary<Package.Asset, string>();
         private static List<Package.Asset> _assetCache = new List<Package.Asset>();
 
-        private static float scrollPositionY = 0.0f;
-        private static float maxScrollPositionY = 0.0f;
+        private static float _scrollPositionY;
+        private static float _maxScrollPositionY;
 
         private static string GetSpriteNameForAssetType(AssetType assetType, bool hovered = false)
         {
             switch (assetType)
             {
                 case AssetType.Favorite:
-                    if (hovered) return "InfoIconHealthHovered";
-                    return "InfoIconHealth";
+                    return hovered ? "InfoIconHealthHovered" : "InfoIconHealth";
                 case AssetType.Building:
-                    if (hovered) return "InfoIconOutsideConnectionsHovered";
-                    return "InfoIconOutsideConnectionsPressed";
+                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
                 case AssetType.Prop:
-                    if (hovered) return "ToolbarIconPropsHovered";
-                    return "ToolbarIconProps";
+                    return hovered ? "ToolbarIconPropsHovered" : "ToolbarIconProps";
                 case AssetType.Tree:
-                    if (hovered) return "IconPolicyForestHovered";
-                    return "IconPolicyForest";
+                    return hovered ? "IconPolicyForestHovered" : "IconPolicyForest";
                 case AssetType.Intersection:
-                    if (hovered) return "ThumbnailJunctionsCloverFocused";
-                    return "ThumbnailJunctionsClover";
+                    return hovered ? "ThumbnailJunctionsCloverFocused" : "ThumbnailJunctionsClover";
                 case AssetType.Park:
-                    if (hovered) return "ToolbarIconBeautificationHovered";
-                    return "ToolbarIconBeautification";
+                    return hovered ? "ToolbarIconBeautificationHovered" : "ToolbarIconBeautification";
                 case AssetType.Electricity:
-                    if (hovered) return "InfoIconElectricityHovered";
-                    return "InfoIconElectricity";
+                    return hovered ? "InfoIconElectricityHovered" : "InfoIconElectricity";
                 case AssetType.WaterAndSewage:
-                    if (hovered) return "InfoIconWaterHovered";
-                    return "InfoIconWater";
+                    return hovered ? "InfoIconWaterHovered" : "InfoIconWater";
                 case AssetType.Garbage:
-                    if (hovered) return "InfoIconGarbageHovered";
-                    return "InfoIconGarbage";
+                    return hovered ? "InfoIconGarbageHovered" : "InfoIconGarbage";
                 case AssetType.Healthcare:
-                    if (hovered) return "ToolbarIconHealthcareHovered";
-                    return "ToolbarIconHealthcare";
+                    return hovered ? "ToolbarIconHealthcareHovered" : "ToolbarIconHealthcare";
                 case AssetType.Deathcare:
-                    if (hovered) return "ToolbarIconHealthcareFocused";
-                    return "ToolbarIconHealthcareDisabled";
+                    return hovered ? "ToolbarIconHealthcareFocused" : "ToolbarIconHealthcareDisabled";
                 case AssetType.FireDepartment:
-                    if (hovered) return "InfoIconFireSafetyHovered";
-                    return "InfoIconFireSafety";
+                    return hovered ? "InfoIconFireSafetyHovered" : "InfoIconFireSafety";
                 case AssetType.PoliceDepartment:
-                    if (hovered) return "ToolbarIconPoliceHovered";
-                    return "ToolbarIconPolice";
+                    return hovered ? "ToolbarIconPoliceHovered" : "ToolbarIconPolice";
                 case AssetType.Education:
-                    if (hovered) return "InfoIconEducationHovered";
-                    return "InfoIconEducation";
+                    return hovered ? "InfoIconEducationHovered" : "InfoIconEducation";
                 case AssetType.Transport:
-                    if (hovered) return "ToolbarIconPublicTransportHovered";
-                    return "ToolbarIconPublicTransport";
+                    return hovered ? "ToolbarIconPublicTransportHovered" : "ToolbarIconPublicTransport";
                 case AssetType.TransportBus:
-                    if (hovered) return "SubBarPublicTransportBusHovered";
-                    return "SubBarPublicTransportBus";
+                    return hovered ? "SubBarPublicTransportBusHovered" : "SubBarPublicTransportBus";
                 case AssetType.TransportMetro:
-                    if (hovered) return "SubBarPublicTransportMetroHovered";
-                    return "SubBarPublicTransportMetro";
+                    return hovered ? "SubBarPublicTransportMetroHovered" : "SubBarPublicTransportMetro";
                 case AssetType.TransportTrain:
-                    if (hovered) return "SubBarPublicTransportTrainHovered";
-                    return "SubBarPublicTransportTrain";
+                    return hovered ? "SubBarPublicTransportTrainHovered" : "SubBarPublicTransportTrain";
                 case AssetType.TransportShip:
-                    if (hovered) return "SubBarPublicTransportShipHovered";
-                    return "SubBarPublicTransportShip";
+                    return hovered ? "SubBarPublicTransportShipHovered" : "SubBarPublicTransportShip";
                 case AssetType.TransportPlane:
-                    if (hovered) return "SubBarPublicTransportPlaneHovered";
-                    return "SubBarPublicTransportPlane";
+                    return hovered ? "SubBarPublicTransportPlaneHovered" : "SubBarPublicTransportPlane";
                 case AssetType.UniqueBuilding:
-                    if (hovered) return "InfoIconLevelHovered";
-                    return "InfoIconLevelFocused";
+                    return hovered ? "InfoIconLevelHovered" : "InfoIconLevelFocused";
                 case AssetType.Monument:
-                    if (hovered) return "ToolbarIconMonumentsHovered";
-                    return "ToolbarIconMonuments";
+                    return hovered ? "ToolbarIconMonumentsHovered" : "ToolbarIconMonuments";
                 case AssetType.Residential:
-                    if (hovered) return "InfoIconOutsideConnectionsHovered";
-                    return "InfoIconOutsideConnectionsPressed";
+                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
                 case AssetType.Commercial:
-                    if (hovered) return "InfoIconOutsideConnectionsHovered";
-                    return "InfoIconOutsideConnectionsPressed";
+                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
                 case AssetType.Industrial:
-                    if (hovered) return "InfoIconOutsideConnectionsHovered";
-                    return "InfoIconOutsideConnectionsPressed";
+                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
                 case AssetType.Office:
-                    if (hovered) return "InfoIconOutsideConnectionsHovered";
-                    return "InfoIconOutsideConnectionsPressed";
+                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
                 case AssetType.Vehicle:
-                    if (hovered) return "InfoIconTrafficCongestionHovered";
-                    return "InfoIconTrafficCongestion";
+                    return hovered ? "InfoIconTrafficCongestionHovered" : "InfoIconTrafficCongestion";
             }
 
             return "";
         }
 
-        private static RedirectCallsState state;
+        private static RedirectCallsState _state;
 
         public static void Bootstrap()
         {
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
             if (syncObject == null)
             {
-                new GameObject("ImprovedAssetsPanelSyncObject").AddComponent<UpdateHook>().onUnityDestroy = () =>
-                {
-                    Revert();
-                };
+                new GameObject("ImprovedAssetsPanelSyncObject").AddComponent<UpdateHook>().onUnityDestroy = Revert;
             }
             else
             {
@@ -234,7 +200,7 @@ namespace ImprovedAssetsPanel
 
             Initialize();
 
-            state = RedirectionHelper.RedirectCalls
+            _state = RedirectionHelper.RedirectCalls
             (
                 typeof(ContentManagerPanel).GetMethod("Refresh",
                     BindingFlags.Instance | BindingFlags.NonPublic),
@@ -242,17 +208,14 @@ namespace ImprovedAssetsPanel
                     BindingFlags.Static | BindingFlags.Public)
             );
 
-            var ContentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
-            ContentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
-            {
-                RefreshAssets();
-            };
+            var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
+            contentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = RefreshAssets;
         }
 
         public static void Revert()
         {
             RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
-                        BindingFlags.Instance | BindingFlags.NonPublic), state);
+                        BindingFlags.Instance | BindingFlags.NonPublic), _state);
 
             UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
@@ -265,76 +228,43 @@ namespace ImprovedAssetsPanel
             assetsList.verticalScrollbar = scrollbar;
             assetsList.isVisible = true;
 
-            Destroy(sortModePanel.gameObject);
-            Destroy(sortModeLabel.gameObject);
-            Destroy(sortOrderButton.gameObject);
-            Destroy(sortOrderLabel.gameObject);
-            Destroy(filterButtons.gameObject);
-            Destroy(additionalOptions.gameObject);
-            Destroy(sortOptions.gameObject);
-            Destroy(newAssetsPanel.gameObject);
+            Destroy(_sortModePanel.gameObject);
+            Destroy(_sortModeLabel.gameObject);
+            Destroy(_sortOrderButton.gameObject);
+            Destroy(_sortOrderLabel.gameObject);
+            Destroy(_filterButtons.gameObject);
+            Destroy(_additionalOptions.gameObject);
+            Destroy(_sortOptions.gameObject);
+            Destroy(_newAssetsPanel.gameObject);
 
-            filterButtons = null;
-            additionalOptions = null;
-            sortOptions = null;
-            sortModePanel = null;
-            sortModeLabel = null;
-            sortOrderButton = null;
-            sortOrderLabel = null;
+            _filterButtons = null;
+            _additionalOptions = null;
+            _sortOptions = null;
+            _sortModePanel = null;
+            _sortModeLabel = null;
+            _sortOrderButton = null;
+            _sortOrderLabel = null;
 
-            sortMode = SortMode.Alphabetical;
-            filterMode = AssetType.All;
-            sortOrder = SortOrder.Ascending;
-            newAssetsPanel = null;
-            assetRows = null;
+            _sortMode = SortMode.Alphabetical;
+            _filterMode = AssetType.All;
+            _sortOrder = SortOrder.Ascending;
+            _newAssetsPanel = null;
+            _assetRows = null;
 
             _assetTypeIndex = new MultiMap<Package.Asset, AssetType>();
             _assetPathCache = new Dictionary<Package.Asset, string>();
             _assetCache = new List<Package.Asset>();
 
-            assetTypeButtons = new List<UIButton>();
-            assetTypeLabels = new Dictionary<AssetType, UILabel>();
+            _assetTypeButtons = new List<UIButton>();
+            _assetTypeLabels = new Dictionary<AssetType, UILabel>();
 
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
-            if (syncObject == null)
+            if (syncObject != null)
             {
                 Destroy(syncObject);
             }
         }
 
-
-        private static UILabel InitializeLabel(UIView uiView, UIPanel dropDownPanel, string labelText)
-        {
-            var label = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
-            label.transform.parent = dropDownPanel.transform;
-            label.text = labelText;
-            label.AlignTo(dropDownPanel, UIAlignAnchor.TopLeft);
-            label.textColor = Color.white;
-            label.textScale = 0.5f;
-            return label;
-        }
-
-        private static UIDropDown InitializeDropDown<T>(UIPanel dropDownPanel, string name)
-        {
-            var dropdown = dropDownPanel.Find<UIDropDown>("ShadowsQuality");
-            dropdown.name = name;
-            dropdown.size = new Vector2(120.0f, 16.0f);
-            dropdown.textScale = 0.7f;
-
-            var sprite = dropdown.Find<UIButton>("Sprite");
-            sprite.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
-
-            var enumValues = Enum.GetValues(typeof(T));
-            dropdown.items = new string[enumValues.Length];
-
-            int i = 0;
-            foreach (var value in enumValues)
-            {
-                dropdown.items[i] = Util.GetEnumDescription<T>((T)value);
-                i++;
-            }
-            return dropdown;
-        }
 
         private static void Initialize()
         {
@@ -362,13 +292,13 @@ namespace ImprovedAssetsPanel
             moarLabel.isVisible = false;
             moarButton.isVisible = false;
 
-            filterButtons = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
-            filterButtons.transform.parent = moarGroup.transform;
-            filterButtons.size = new Vector2(600.0f, 32.0f);
+            _filterButtons = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
+            _filterButtons.transform.parent = moarGroup.transform;
+            _filterButtons.size = new Vector2(600.0f, 32.0f);
 
             var assetTypes = (AssetType[])Enum.GetValues(typeof(AssetType));
 
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
 
             var scrollbar =
@@ -376,10 +306,10 @@ namespace ImprovedAssetsPanel
                     .transform.parent.GetComponent<UIComponent>()
                     .Find<UIScrollbar>("Scrollbar");
 
-            float x = 0.0f;
+            var x = 0.0f;
             foreach (var assetType in assetTypes)
             {
-                if (assetType == AssetType.Unknown || assetType == AssetType.ColorLUT)
+                if (assetType == AssetType.Unknown || assetType == AssetType.ColorLut)
                 {
                     continue;
                 }
@@ -403,8 +333,8 @@ namespace ImprovedAssetsPanel
                 button.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
                 button.scaleFactor = 1.0f;
                 button.isVisible = true;
-                button.transform.parent = filterButtons.transform;
-                button.AlignTo(filterButtons, UIAlignAnchor.TopLeft);
+                button.transform.parent = _filterButtons.transform;
+                button.AlignTo(_filterButtons, UIAlignAnchor.TopLeft);
                 button.relativePosition = new Vector3(x, 0.0f);
                 x += 22.0f;
 
@@ -436,16 +366,12 @@ namespace ImprovedAssetsPanel
                     button.opacity = 1.0f;
                 }
 
+                var type = assetType;
                 button.eventClick += (component, param) =>
                 {
-                    filterMode = assetType;
+                    _filterMode = type;
 
-                    //TODO(earalov): call these three lines only on bootstrap
-                    assetsList.isVisible = false;
-                    assetsList.verticalScrollbar = null;
-                    newAssetsPanel.isVisible = true;
-
-                    foreach (var item in assetTypeButtons)
+                    foreach (var item in _assetTypeButtons)
                     {
                         item.opacity = 0.25f;
                     }
@@ -455,23 +381,23 @@ namespace ImprovedAssetsPanel
                     RefreshAssets();
                 };
 
-                assetTypeButtons.Add(button);
+                _assetTypeButtons.Add(button);
 
                 var label = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
-                label.text = "99";
+                label.text = "N/A";
                 label.AlignTo(button, UIAlignAnchor.TopRight);
                 label.relativePosition = new Vector3(16.0f, 0.0f, 0.0f);
                 label.zOrder = 7;
                 label.textScale = 0.5f;
                 label.textColor = Color.white;
-                assetTypeLabels.Add(assetType, label);
+                _assetTypeLabels.Add(assetType, label);
             }
 
-            additionalOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
-            additionalOptions.transform.parent = moarGroup.transform;
-            additionalOptions.size = new Vector2(120.0f, 32.0f);
+            _additionalOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
+            _additionalOptions.transform.parent = moarGroup.transform;
+            _additionalOptions.size = new Vector2(120.0f, 32.0f);
 
-            var activateAll = additionalOptions.AddUIComponent<UIButton>();
+            var activateAll = _additionalOptions.AddUIComponent<UIButton>();
             activateAll.size = new Vector2(110.0f, 16.0f);
             activateAll.text = "Activate all";
             activateAll.textScale = 0.7f;
@@ -480,7 +406,7 @@ namespace ImprovedAssetsPanel
             activateAll.hoveredBgSprite = "ButtonMenuHovered";
             activateAll.focusedBgSprite = "ButtonMenu";
             activateAll.pressedBgSprite = "ButtonMenuPressed";
-            activateAll.AlignTo(additionalOptions, UIAlignAnchor.TopLeft);
+            activateAll.AlignTo(_additionalOptions, UIAlignAnchor.TopLeft);
             activateAll.relativePosition = new Vector3(4.0f, 0.0f);
             activateAll.eventClick += (component, param) =>
             {
@@ -492,7 +418,7 @@ namespace ImprovedAssetsPanel
                 RefreshAssets();
             };
 
-            var deactivateAll = additionalOptions.AddUIComponent<UIButton>();
+            var deactivateAll = _additionalOptions.AddUIComponent<UIButton>();
             deactivateAll.size = new Vector2(110.0f, 16.0f);
             deactivateAll.text = "Deactivate all";
             deactivateAll.textScale = 0.7f;
@@ -501,7 +427,7 @@ namespace ImprovedAssetsPanel
             deactivateAll.hoveredBgSprite = "ButtonMenuHovered";
             deactivateAll.focusedBgSprite = "ButtonMenu";
             deactivateAll.pressedBgSprite = "ButtonMenuPressed";
-            deactivateAll.AlignTo(additionalOptions, UIAlignAnchor.TopLeft);
+            deactivateAll.AlignTo(_additionalOptions, UIAlignAnchor.TopLeft);
             deactivateAll.relativePosition = new Vector3(4.0f, 18.0f);
             deactivateAll.eventClick += (component, param) =>
             {
@@ -513,144 +439,146 @@ namespace ImprovedAssetsPanel
                 RefreshAssets();
             };
 
-            sortOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
-            sortOptions.transform.parent = moarGroup.transform;
-            sortOptions.size = new Vector2(120.0f, 32.0f);
+            _sortOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
+            _sortOptions.transform.parent = moarGroup.transform;
+            _sortOptions.size = new Vector2(120.0f, 32.0f);
 
-            sortModePanel = GameObject.Instantiate(shadows);
-            sortModePanel.gameObject.name = "AssetsSortMode";
-            sortModePanel.transform.parent = sortOptions.transform;
-            sortModePanel.name = "AssetsSortMode";
-            sortModePanel.AlignTo(sortOptions, UIAlignAnchor.TopLeft);
-            sortModePanel.Find<UILabel>("Label").isVisible = false;
-            sortModePanel.size = new Vector2(120.0f, 16.0f);
-            sortModePanel.autoLayout = false;
+            _sortModePanel = Instantiate(shadows);
+            _sortModePanel.gameObject.name = "AssetsSortMode";
+            _sortModePanel.transform.parent = _sortOptions.transform;
+            _sortModePanel.name = "AssetsSortMode";
+            _sortModePanel.AlignTo(_sortOptions, UIAlignAnchor.TopLeft);
+            _sortModePanel.Find<UILabel>("Label").isVisible = false;
+            _sortModePanel.size = new Vector2(120.0f, 16.0f);
+            _sortModePanel.autoLayout = false;
 
-            sortModeLabel = InitializeLabel(uiView, sortModePanel, "Sort by");
-            sortModeLabel.relativePosition = new Vector3(0.0f, -2.0f, 0.0f);
+            _sortModeLabel = InitializeLabel(uiView, _sortModePanel, "Sort by");
+            _sortModeLabel.relativePosition = new Vector3(0.0f, -2.0f, 0.0f);
 
-            var sortModeDropDown = InitializeDropDown<SortMode>(sortModePanel, "SortModeDropDown");
+            var sortModeDropDown = InitializeDropDown<SortMode>(_sortModePanel, "SortModeDropDown");
             sortModeDropDown.relativePosition = new Vector3(0.0f, 0.0f, 0.0f);
             sortModeDropDown.eventSelectedIndexChanged += (component, value) =>
             {
-                sortMode = (SortMode)value;
+                _sortMode = (SortMode)value;
                 ScrollAssetsList(0.0f);
                 RefreshAssets();
             };
 
-            sortOrderButton = sortModePanel.AddUIComponent<UIButton>();
-            sortOrderButton.transform.parent = sortOptions.transform;
-            sortOrderButton.AlignTo(sortOptions, UIAlignAnchor.TopLeft);
-            sortOrderButton.size = new Vector2(120.0f, 16.0f);
-            sortOrderButton.text = Util.GetEnumDescription<SortOrder>(sortOrder);
-            sortOrderButton.textScale = 0.7f;
-            sortOrderButton.normalBgSprite = "ButtonMenu";
-            sortOrderButton.disabledBgSprite = "ButtonMenuDisabled";
-            sortOrderButton.hoveredBgSprite = "ButtonMenuHovered";
-            sortOrderButton.focusedBgSprite = "ButtonMenu";
-            sortOrderButton.pressedBgSprite = "ButtonMenuPressed";
-            sortOrderButton.AlignTo(sortOptions, UIAlignAnchor.TopLeft);
-            sortOrderButton.relativePosition = new Vector3(0.0f, 16.0f);
-            sortOrderButton.eventClick += (component, param) =>
+            _sortOrderButton = _sortModePanel.AddUIComponent<UIButton>();
+            _sortOrderButton.transform.parent = _sortOptions.transform;
+            _sortOrderButton.AlignTo(_sortOptions, UIAlignAnchor.TopLeft);
+            _sortOrderButton.size = new Vector2(120.0f, 16.0f);
+            _sortOrderButton.text = _sortOrder.GetEnumDescription();
+            _sortOrderButton.textScale = 0.7f;
+            _sortOrderButton.normalBgSprite = "ButtonMenu";
+            _sortOrderButton.disabledBgSprite = "ButtonMenuDisabled";
+            _sortOrderButton.hoveredBgSprite = "ButtonMenuHovered";
+            _sortOrderButton.focusedBgSprite = "ButtonMenu";
+            _sortOrderButton.pressedBgSprite = "ButtonMenuPressed";
+            _sortOrderButton.AlignTo(_sortOptions, UIAlignAnchor.TopLeft);
+            _sortOrderButton.relativePosition = new Vector3(0.0f, 16.0f);
+            _sortOrderButton.eventClick += (component, param) =>
             {
-                if (sortOrder == SortOrder.Ascending)
+                if (_sortOrder == SortOrder.Ascending)
                 {
-                    sortOrder = SortOrder.Descending;
+                    _sortOrder = SortOrder.Descending;
                 }
-                else if (sortOrder == SortOrder.Descending)
+                else if (_sortOrder == SortOrder.Descending)
                 {
-                    sortOrder = SortOrder.Ascending;
+                    _sortOrder = SortOrder.Ascending;
                 }
-                sortOrderButton.text = Util.GetEnumDescription<SortOrder>(sortOrder);
+                _sortOrderButton.text = _sortOrder.GetEnumDescription();
                 RefreshAssets();
             };
 
-            sortOrderLabel = InitializeLabel(uiView, sortOptions, "Sort Order");
-            sortOrderLabel.relativePosition = new Vector3(0.0f, 14.0f, 0.0f);
+            _sortOrderLabel = InitializeLabel(uiView, _sortOptions, "Sort Order");
+            _sortOrderLabel.relativePosition = new Vector3(0.0f, 14.0f, 0.0f);
 
 
             assetsList.verticalScrollbar = null;
             assetsList.isVisible = false;
 
-            newAssetsPanel = assetsList.transform.parent.GetComponent<UIComponent>().AddUIComponent<UIPanel>();
-            newAssetsPanel.anchor = assetsList.anchor;
-            newAssetsPanel.size = assetsList.size;
-            newAssetsPanel.relativePosition = assetsList.relativePosition;
-            newAssetsPanel.name = "NewAssetsList";
-            newAssetsPanel.clipChildren = true;
+            _newAssetsPanel = assetsList.transform.parent.GetComponent<UIComponent>().AddUIComponent<UIPanel>();
+            _newAssetsPanel.anchor = assetsList.anchor;
+            _newAssetsPanel.size = assetsList.size;
+            _newAssetsPanel.relativePosition = assetsList.relativePosition;
+            _newAssetsPanel.name = "NewAssetsList";
+            _newAssetsPanel.clipChildren = true;
 
-            newAssetsPanel.eventMouseWheel += (component, param) =>
+            _newAssetsPanel.eventMouseWheel += (component, param) =>
             {
-                if (rowCount <= 2)
+                if (RowCount <= 2)
                 {
                     return;
                 }
 
-                var originalScrollPos = scrollPositionY;
-                scrollPositionY -= param.wheelDelta * 80.0f;
-                scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY - newAssetsPanel.size.y);
+                var originalScrollPos = _scrollPositionY;
+                _scrollPositionY -= param.wheelDelta * 80.0f;
+                _scrollPositionY = Mathf.Clamp(_scrollPositionY, 0.0f, _maxScrollPositionY - _newAssetsPanel.size.y);
 
-                ScrollRows(originalScrollPos - scrollPositionY);
+                ScrollRows(originalScrollPos - _scrollPositionY);
                 SwapRows();
 
-                SetScrollBar(scrollPositionY);
+                SetScrollBar(_scrollPositionY);
             };
 
-            float y = 0.0f;
+            var y = 0.0f;
 
-            assetRows = new UIPanel[4];
-            for (int q = 0; q < 4; q++)
+            _assetRows = new UIPanel[4];
+            for (var q = 0; q < 4; q++)
             {
-                assetRows[q] = newAssetsPanel.AddUIComponent<UIPanel>();
-                assetRows[q].name = "AssetRow" + q;
-                assetRows[q].size = new Vector2(1200.0f, 173.0f); ;
-                assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
-                y += assetRows[q].size.y;
+                _assetRows[q] = _newAssetsPanel.AddUIComponent<UIPanel>();
+                _assetRows[q].name = "AssetRow" + q;
+                _assetRows[q].size = new Vector2(1200.0f, 173.0f);
+                _assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
+                y += _assetRows[q].size.y;
             }
 
             scrollbar.eventMouseUp += (component, param) =>
             {
-                if (!newAssetsPanel.isVisible)
+                if (!_newAssetsPanel.isVisible)
                 {
                     return;
                 }
 
-                if (scrollbar.value != scrollPositionY)
+                if (scrollbar.value == _scrollPositionY)
                 {
-                    if (rowCount <= 2)
-                    {
-                        return;
-                    }
-
-                    var originalScrollPos = scrollPositionY;
-                    scrollPositionY = scrollbar.value;
-                    scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY - newAssetsPanel.size.y);
-
-                    if (scrollPositionY != originalScrollPos)
-                    {
-                        var viewSize = newAssetsPanel.size.y;
-
-                        var realRowIndex = (int)Mathf.Floor((scrollPositionY / viewSize) * (viewSize / (assetRows[0].size.y + 2.0f)));
-                        var diff = scrollPositionY - realRowIndex * (assetRows[0].size.y + 2.0f);
-
-                        float _y = 0.0f;
-                        for (int q = 0; q < 4; q++)
-                        {
-                            assetRows[q].relativePosition = new Vector3(0.0f, _y, 0.0f);
-                            _y += assetRows[q].size.y + 2.0f;
-                        }
-
-                        var rowsCount = (int)Mathf.Ceil(_assetCache.Count / 3.0f);
-
-                        for (int q = 0; q < Mathf.Min(rowsCount, 4); q++)
-                        {
-                            DrawAssets(q, realRowIndex + q);
-                        }
-
-                        ScrollRows(-diff);
-                        SetScrollBar(scrollPositionY);
-                    }
+                    return;
                 }
+                if (RowCount <= 2)
+                {
+                    return;
+                }
+
+                var originalScrollPos = _scrollPositionY;
+                _scrollPositionY = scrollbar.value;
+                _scrollPositionY = Mathf.Clamp(_scrollPositionY, 0.0f, _maxScrollPositionY - _newAssetsPanel.size.y);
+
+                if (_scrollPositionY == originalScrollPos)
+                {
+                    return;
+                }
+                var viewSize = _newAssetsPanel.size.y;
+
+                var realRowIndex = (int)Mathf.Floor((_scrollPositionY / viewSize) * (viewSize / (_assetRows[0].size.y + 2.0f)));
+                var diff = _scrollPositionY - realRowIndex * (_assetRows[0].size.y + 2.0f);
+
+                var _y = 0.0f;
+                for (var q = 0; q < 4; q++)
+                {
+                    _assetRows[q].relativePosition = new Vector3(0.0f, _y, 0.0f);
+                    _y += _assetRows[q].size.y + 2.0f;
+                }
+
+                var rowsCount = (int)Mathf.Ceil(_assetCache.Count / 3.0f);
+
+                for (var q = 0; q < Mathf.Min(rowsCount, 4); q++)
+                {
+                    DrawAssets(q, realRowIndex + q);
+                }
+
+                ScrollRows(-diff);
+                SetScrollBar(_scrollPositionY);
             };
 
             scrollbar.eventValueChanged += (component, value) =>
@@ -660,91 +588,121 @@ namespace ImprovedAssetsPanel
                     return;
                 }
 
-                if (!newAssetsPanel.isVisible)
+                if (!_newAssetsPanel.isVisible)
                 {
                     return;
                 }
 
-                if (value != scrollPositionY)
+                if (value == _scrollPositionY)
                 {
-                    if (rowCount <= 2)
-                    {
-                        return;
-                    }
-
-                    var originalScrollPos = scrollPositionY;
-                    scrollPositionY = value;
-                    scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY - newAssetsPanel.size.y);
-
-                    var diff = Mathf.Clamp(scrollPositionY - originalScrollPos, -(assetRows[0].size.y + 4), assetRows[0].size.y + 4);
-                    scrollPositionY = originalScrollPos + diff;
-                    ScrollRows(-diff);
-                    SwapRows();
-
-                    SetScrollBar(scrollPositionY);
+                    return;
                 }
+                if (RowCount <= 2)
+                {
+                    return;
+                }
+
+                var originalScrollPos = _scrollPositionY;
+                _scrollPositionY = value;
+                _scrollPositionY = Mathf.Clamp(_scrollPositionY, 0.0f, _maxScrollPositionY - _newAssetsPanel.size.y);
+
+                var diff = Mathf.Clamp(_scrollPositionY - originalScrollPos, -(_assetRows[0].size.y + 4), _assetRows[0].size.y + 4);
+                _scrollPositionY = originalScrollPos + diff;
+                ScrollRows(-diff);
+                SwapRows();
+
+                SetScrollBar(_scrollPositionY);
             };
+
+            assetsList.isVisible = false;
+            assetsList.verticalScrollbar = null;
+            _newAssetsPanel.isVisible = true;
+        }
+
+        private static UILabel InitializeLabel(UIView uiView, UIComponent parent, string labelText)
+        {
+            var label = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
+            label.transform.parent = parent.transform;
+            label.text = labelText;
+            label.AlignTo(parent, UIAlignAnchor.TopLeft);
+            label.textColor = Color.white;
+            label.textScale = 0.5f;
+            return label;
+        }
+
+        private static UIDropDown InitializeDropDown<T>(UIPanel dropDownPanel, string name)
+        {
+            var dropdown = dropDownPanel.Find<UIDropDown>("ShadowsQuality");
+            dropdown.name = name;
+            dropdown.size = new Vector2(120.0f, 16.0f);
+            dropdown.textScale = 0.7f;
+
+            var sprite = dropdown.Find<UIButton>("Sprite");
+            sprite.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
+
+            var enumValues = Enum.GetValues(typeof(T));
+            dropdown.items = new string[enumValues.Length];
+
+            var i = 0;
+            foreach (var value in enumValues)
+            {
+                dropdown.items[i] = ((T)value).GetEnumDescription();
+                i++;
+            }
+            return dropdown;
         }
 
         private static void SetAssetCountLabels()
         {
 
-            foreach (var assetType in assetTypeLabels.Keys)
+            foreach (var assetType in _assetTypeLabels.Keys)
             {
-                var label = assetTypeLabels[assetType];
-                if (assetType == AssetType.All)
+                var label = _assetTypeLabels[assetType];
+                switch (assetType)
                 {
-                    label.text = _assetTypeIndex.Keys.Count().ToString();
-                    continue;
+                    case AssetType.All:
+                        label.text = _assetTypeIndex.Keys.Count().ToString();
+                        continue;
+                    case AssetType.Favorite:
+                        label.text = _config.favoriteAssets.Count.ToString();
+                        continue;
                 }
-                if (assetType == AssetType.Favorite)
-                {
-                    label.text = config.favoriteAssets.Count.ToString();
-                    continue;
-                }
-                int count = 0;
+                var count = _assetTypeIndex.Keys.Count(asset => _assetTypeIndex[asset].Contains(assetType));
 
-                foreach (var asset in _assetTypeIndex.Keys)
-                {
-                    if (_assetTypeIndex[asset].Contains(assetType))
-                    {
-                        count++;
-                    }
-                }
                 label.text = count.ToString();
 
             }
         }
 
 
-        private static int rowCount
+        private static int RowCount
         {
             get { return (int)Mathf.Ceil(_assetCache.Count / 3.0f); }
         }
 
         private static void ScrollRows(float yOffset)
         {
-            for (int i = 0; i < 4; i++)
+            for (var i = 0; i < 4; i++)
             {
-                var row = assetRows[i];
+                var row = _assetRows[i];
                 row.relativePosition = new Vector3(row.relativePosition.x, row.relativePosition.y + yOffset, row.relativePosition.z);
             }
         }
 
         private static void SwapRows()
         {
-            if (assetRows[0].relativePosition.y + assetRows[0].size.y + 2.0f < 0.0f)
+            if (_assetRows[0].relativePosition.y + _assetRows[0].size.y + 2.0f < 0.0f)
             {
-                assetRows[0].relativePosition = new Vector3(0.0f, assetRows[3].relativePosition.y + assetRows[3].size.y + 2.0f);
-                var firstRealRow = (int)Mathf.Floor(scrollPositionY / (assetRows[0].size.y + 2.0f));
+                _assetRows[0].relativePosition = new Vector3(0.0f, _assetRows[3].relativePosition.y + _assetRows[3].size.y + 2.0f);
+                var firstRealRow = (int)Mathf.Floor(_scrollPositionY / (_assetRows[0].size.y + 2.0f));
                 var lastRealRow = firstRealRow + 3;
                 DrawAssets(0, lastRealRow);
                 ShiftRowsUp();
             }
-            else if (assetRows[0].relativePosition.y > 0.0f)
+            else if (_assetRows[0].relativePosition.y > 0.0f)
             {
-                assetRows[3].relativePosition = new Vector3(0.0f, assetRows[0].relativePosition.y - assetRows[3].size.y - 2.0f);
-                var firstRealRow = (int)Mathf.Floor(scrollPositionY / (assetRows[0].size.y + 2.0f));
+                _assetRows[3].relativePosition = new Vector3(0.0f, _assetRows[0].relativePosition.y - _assetRows[3].size.y - 2.0f);
+                var firstRealRow = (int)Mathf.Floor(_scrollPositionY / (_assetRows[0].size.y + 2.0f));
                 DrawAssets(3, firstRealRow);
                 ShiftRowsDown();
             }
@@ -752,25 +710,25 @@ namespace ImprovedAssetsPanel
 
         private static void ShiftRowsUp()
         {
-            var tmp = assetRows[0];
-            assetRows[0] = assetRows[1];
-            assetRows[1] = assetRows[2];
-            assetRows[2] = assetRows[3];
-            assetRows[3] = tmp;
+            var tmp = _assetRows[0];
+            _assetRows[0] = _assetRows[1];
+            _assetRows[1] = _assetRows[2];
+            _assetRows[2] = _assetRows[3];
+            _assetRows[3] = tmp;
         }
 
         private static void ShiftRowsDown()
         {
-            var tmp = assetRows[3];
-            assetRows[3] = assetRows[2];
-            assetRows[2] = assetRows[1];
-            assetRows[1] = assetRows[0];
-            assetRows[0] = tmp;
+            var tmp = _assetRows[3];
+            _assetRows[3] = _assetRows[2];
+            _assetRows[2] = _assetRows[1];
+            _assetRows[1] = _assetRows[0];
+            _assetRows[0] = tmp;
         }
 
         private static void ScrollAssetsList(float value)
         {
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
 
             var scrollbar =
@@ -783,7 +741,7 @@ namespace ImprovedAssetsPanel
 
         private static void SetScrollBar(float maxValue, float scrollSize, float value = 0.0f)
         {
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
 
             var scrollbar =
@@ -798,7 +756,7 @@ namespace ImprovedAssetsPanel
 
         private static void SetScrollBar(float value = 0.0f)
         {
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
 
             var scrollbar =
@@ -824,6 +782,7 @@ namespace ImprovedAssetsPanel
             }
             catch (Exception)
             {
+                // ignored
             }
 
             if (customAssetMetaData == null)
@@ -995,23 +954,23 @@ namespace ImprovedAssetsPanel
             var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList();
             ReIndexAssets(assets);
 
-            if (filterMode == AssetType.All)
+            switch (_filterMode)
             {
-                _assetCache = assets;
-            }
-            else if (filterMode == AssetType.Favorite)
-            {
-                _assetCache = assets.FindAll(asset => config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64));
-            }
-            else
-            {
-                _assetCache = assets.FindAll(asset => _assetTypeIndex[asset].Contains(filterMode));
+                case AssetType.All:
+                    _assetCache = assets;
+                    break;
+                case AssetType.Favorite:
+                    _assetCache = assets.FindAll(asset => _config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64));
+                    break;
+                default:
+                    _assetCache = assets.FindAll(asset => _assetTypeIndex[asset].Contains(_filterMode));
+                    break;
             }
         }
 
-        private static bool isFavorite(Package.Asset asset)
+        private static bool IsFavorite(Package.Asset asset)
         {
-            return config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64);
+            return _config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64);
         }
 
         private static void SortCachedAssets()
@@ -1019,70 +978,65 @@ namespace ImprovedAssetsPanel
 
             Func<Package.Asset, Package.Asset, int> comparerLambda;
 
-            if (sortMode == SortMode.Alphabetical)
+            switch (_sortMode)
             {
-                comparerLambda = (a, b) =>
-                {
-                    if (a.name == null)
+                case SortMode.Alphabetical:
+                    comparerLambda = (a, b) =>
                     {
-                        return 1;
-                    }
+                        if (a.name == null)
+                        {
+                            return 1;
+                        }
 
-                    if (b.name == null)
+                        if (b.name == null)
+                        {
+                            return -1;
+                        }
+
+                        return String.Compare(a.name, b.name, StringComparison.Ordinal);
+                    };
+                    break;
+                case SortMode.LastUpdated:
+                    comparerLambda = (a, b) => GetAssetLastModifiedDelta(a).CompareTo(GetAssetLastModifiedDelta(b));
+                    break;
+                case SortMode.LastSubscribed:
+                    comparerLambda = (a, b) => GetAssetCreatedDelta(a).CompareTo(GetAssetCreatedDelta(b));
+                    break;
+                case SortMode.Active:
+                    comparerLambda = (a, b) => b.isEnabled.CompareTo(a.isEnabled);
+                    break;
+                case SortMode.Favorite:
+                    comparerLambda = (a, b) => IsFavorite(b).CompareTo(IsFavorite(a));
+                    break;
+                case SortMode.Location:
+                    comparerLambda = (a, b) =>
                     {
-                        return -1;
-                    }
+                        var aIsWorkshop = a.package.packagePath.Contains("workshop");
+                        var bIsWorkshop = b.package.packagePath.Contains("workshop");
+                        if (aIsWorkshop && bIsWorkshop)
+                        {
+                            return String.Compare(a.name, b.name, StringComparison.Ordinal);
+                        }
 
-                    return a.name.CompareTo(b.name);
-                };
-            }
-            else if (sortMode == SortMode.LastUpdated)
-            {
-                comparerLambda = (a, b) => GetAssetLastModifiedDelta(a).CompareTo(GetAssetLastModifiedDelta(b));
-            }
-            else if (sortMode == SortMode.LastSubscribed)
-            {
-                comparerLambda = (a, b) => GetAssetCreatedDelta(a).CompareTo(GetAssetCreatedDelta(b));
-            }
-            else if (sortMode == SortMode.Active)
-            {
-                comparerLambda = (a, b) => b.isEnabled.CompareTo(a.isEnabled);
-            }
-            else if (sortMode == SortMode.Favorite)
-            {
-                comparerLambda = (a, b) => isFavorite(b).CompareTo(isFavorite(a));
-            }
-            else if (sortMode == SortMode.Location)
-            {
-                comparerLambda = (a, b) =>
-                {
-                    var aIsWorkshop = a.package.packagePath.Contains("workshop");
-                    var bIsWorkshop = b.package.packagePath.Contains("workshop");
-                    if (aIsWorkshop && bIsWorkshop)
-                    {
-                        return a.name.CompareTo(b.name);
-                    }
+                        if (aIsWorkshop)
+                        {
+                            return 1;
+                        }
 
-                    if (aIsWorkshop)
-                    {
-                        return 1;
-                    }
+                        if (bIsWorkshop)
+                        {
+                            return -1;
+                        }
 
-                    if (bIsWorkshop)
-                    {
-                        return -1;
-                    }
-
-                    return a.name.CompareTo(b.name);
-                };
-            }
-            else
-            {
-                return;
+                        return String.Compare(a.name, b.name, StringComparison.Ordinal);
+                    };
+                    break;
+                default:
+                    return;
             }
             _assetCache.Sort(new FunctionalComparer<Package.Asset>(
-                sortOrder == SortOrder.Ascending ? comparerLambda :
-                (a, b) => { return -comparerLambda(a, b); }));
+                _sortOrder == SortOrder.Ascending ? comparerLambda :
+                (a, b) => -comparerLambda(a, b)));
 
         }
 
@@ -1100,8 +1054,8 @@ namespace ImprovedAssetsPanel
                 return;
             }
 
-            UIPanel currentPanel = assetRows[virtualRow];
-            for (int i = 0; i < currentPanel.transform.childCount; i++)
+            var currentPanel = _assetRows[virtualRow];
+            for (var i = 0; i < currentPanel.transform.childCount; i++)
             {
                 Destroy(currentPanel.transform.GetChild(i).gameObject);
             }
@@ -1109,9 +1063,9 @@ namespace ImprovedAssetsPanel
             var assetsCount = _assetCache.Count;
 
             float currentX = 0;
-            for (int i = realRow * 3; i < Mathf.Min((realRow + 1) * 3, assetsCount); i++)
+            for (var i = realRow * 3; i < Mathf.Min((realRow + 1) * 3, assetsCount); i++)
             {
-                var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
+                var packageEntry = UITemplateManager.Get<PackageEntry>(KAssetEntryTemplate);
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
 
                 var current = _assetCache[i];
@@ -1125,8 +1079,8 @@ namespace ImprovedAssetsPanel
                 packageEntry.RequestDetails();
 
                 var panel = packageEntry.gameObject.GetComponent<UIPanel>();
-                var panelSizeX = 310.0f;
-                var panelSizeY = 173.0f;
+                const float panelSizeX = 310.0f;
+                const float panelSizeY = 173.0f;
                 panel.size = new Vector2(panelSizeX, panelSizeY);
                 panel.relativePosition = new Vector3(currentX, 0.0f);
                 panel.backgroundSprite = "";
@@ -1174,21 +1128,21 @@ namespace ImprovedAssetsPanel
                 favButton.size = new Vector2(36.0f, 36.0f);
                 favButton.relativePosition = new Vector3(panelSizeX - 42.0f, panelSizeY - 62.0f);
 
-                var isFavorite = config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
+                var isFavorite = _config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
                 favButton.opacity = isFavorite ? 1.0f : 0.5f;
                 favButton.zOrder = 7;
                 favButton.tooltip = "Set/ unset favorite";
 
                 favButton.eventClick += (uiComponent, param) =>
                 {
-                    if (config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
+                    if (_config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
                     {
-                        config.favoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
+                        _config.favoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
                         favButton.opacity = 0.5f;
                     }
                     else
                     {
-                        config.favoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
+                        _config.favoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
                         favButton.opacity = 1.0f;
                     }
 
@@ -1218,9 +1172,9 @@ namespace ImprovedAssetsPanel
         {
             foreach (var current in PackageManager.FilterAssets(UserAssetType.ColorCorrection))
             {
-                UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+                var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
                 var assetsList = categoryContainer.Find("ColorCorrections").Find("Content");
-                var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
+                var packageEntry = UITemplateManager.Get<PackageEntry>(KAssetEntryTemplate);
                 assetsList.AttachUIComponent(packageEntry.gameObject);
                 packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
                     current.type, ")");
@@ -1234,24 +1188,24 @@ namespace ImprovedAssetsPanel
 
         public static void RefreshAssets()
         {
-            UITemplateManager.ClearInstances(kAssetEntryTemplate);
+            UITemplateManager.ClearInstances(KAssetEntryTemplate);
 
             RefreshColorCorrectionsList();
             PreCacheAssets();
             SortCachedAssets();
             SetAssetCountLabels();
 
-            float y = 0.0f;
+            var y = 0.0f;
 
-            for (int q = 0; q < 4; q++)
+            for (var q = 0; q < 4; q++)
             {
-                assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
-                y += assetRows[q].size.y + 2.0f;
+                _assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
+                y += _assetRows[q].size.y + 2.0f;
             }
 
-            scrollPositionY = 0.0f;
-            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count / 3.0f)) * (assetRows[0].size.y + 2.0f);
-            SetScrollBar(maxScrollPositionY, newAssetsPanel.size.y);
+            _scrollPositionY = 0.0f;
+            _maxScrollPositionY = (Mathf.Ceil(_assetCache.Count / 3.0f)) * (_assetRows[0].size.y + 2.0f);
+            SetScrollBar(_maxScrollPositionY, _newAssetsPanel.size.y);
 
             DrawAssets(0, 0);
             DrawAssets(1, 1);
