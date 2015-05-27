@@ -98,6 +98,7 @@ namespace ImprovedAssetsPanel
         private static UIPanel sortModePanel;
         private static UILabel sortModeLabel;
         private static UIButton sortOrderButton;
+        private static UILabel sortOrderLabel;
         private static UIPanel sortOptions;
         private static UIPanel additionalOptions;
 
@@ -107,7 +108,7 @@ namespace ImprovedAssetsPanel
 
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
 
-        private static List<UIButton> assetTypeButtons;
+        private static List<UIButton> assetTypeButtons = new List<UIButton>();
         private static Dictionary<AssetType, UILabel> assetTypeLabels = new Dictionary<AssetType,UILabel>(); 
 
         private static UIPanel newAssetsPanel;
@@ -247,7 +248,7 @@ namespace ImprovedAssetsPanel
                 RefreshAssets();
             };
         }
-
+        
         public static void Revert()
         {
             RedirectionHelper.RevertRedirect(typeof (ContentManagerPanel).GetMethod("Refresh",
@@ -267,6 +268,7 @@ namespace ImprovedAssetsPanel
             Destroy(sortModePanel.gameObject);
             Destroy(sortModeLabel.gameObject);
             Destroy(sortOrderButton.gameObject);
+            Destroy(sortOrderLabel.gameObject);
             Destroy(filterButtons.gameObject);
             Destroy(additionalOptions.gameObject);
             Destroy(sortOptions.gameObject);
@@ -278,6 +280,8 @@ namespace ImprovedAssetsPanel
             sortModePanel = null;
             sortModeLabel = null;
             sortOrderButton = null;
+            sortOrderLabel = null;
+
             sortMode = SortMode.Alphabetical;
             filterMode = AssetType.All;
             sortOrder = SortOrder.Ascending;
@@ -287,6 +291,9 @@ namespace ImprovedAssetsPanel
             _assetTypeIndex = new MultiMap<Package.Asset, AssetType>();
             _assetPathCache = new Dictionary<Package.Asset, string>();
             _assetCache = new List<Package.Asset>();
+
+            assetTypeButtons = new List<UIButton>();
+            assetTypeLabels = new Dictionary<AssetType,UILabel>(); 
 
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
             if (syncObject == null)
@@ -368,8 +375,6 @@ namespace ImprovedAssetsPanel
                 assetsList
                     .transform.parent.GetComponent<UIComponent>()
                     .Find<UIScrollbar>("Scrollbar");
-
-            assetTypeButtons = new List<UIButton>();
 
             float x = 0.0f;
             foreach (var assetType in assetTypes)
@@ -559,27 +564,8 @@ namespace ImprovedAssetsPanel
                 RefreshAssets();
             };
 
-            //TODO(earalov): Fix me. Use combobox for asc/desc if possible. At this moment it's displayed but is unresponsive
-            /*sortOrderPanel = GameObject.Instantiate(shadows);
-            sortOrderPanel.gameObject.name = "AssetsSortOrder";
-            sortOrderPanel.transform.parent = sortOptions.transform;
-            sortOrderPanel.name = "AssetsSortOrder";
-            sortOrderPanel.AlignTo(sortOptions, UIAlignAnchor.TopLeft);
-            sortOrderPanel.Find<UILabel>("Label").isVisible = false;
-            sortOrderPanel.size = new Vector2(120.0f, 16.0f);
-            sortOrderPanel.autoLayout = false;
-
-            sortOrderLabel = InitializeLabel(uiView, sortOrderPanel, "Sort Order");
+            sortOrderLabel = InitializeLabel(uiView, sortOptions, "Sort Order");
             sortOrderLabel.relativePosition = new Vector3(0.0f, 14.0f, 0.0f);
-
-            var sortOrderDropDown = InitializeDropDown<SortOrder>(sortOrderPanel, "SortOrderDropDown");
-            sortOrderDropDown.relativePosition = new Vector3(0.0f, 16.0f, 0.0f);
-            sortOrderDropDown.eventSelectedIndexChanged += (component, value) =>
-            {
-                sortOrder = (SortOrder)value;
-                ScrollAssetsList(0.0f);
-                RefreshAssets();
-            };*/
 
 
             assetsList.verticalScrollbar = null;
