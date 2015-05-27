@@ -1085,7 +1085,7 @@ namespace ImprovedAssetsPanel
                 packageEntry.entryActive = current.isEnabled;
                 packageEntry.package = current.package;
                 packageEntry.asset = current;
-
+                packageEntry.publishedFileId = current.package.GetPublishedFileID();
                 packageEntry.RequestDetails();
             }
         }
