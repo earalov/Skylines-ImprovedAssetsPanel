@@ -47,7 +47,7 @@ namespace ImprovedAssetsPanel
             Residential,
             Commercial,
             Industrial,
-            Office, 
+            Office,
             Prop,
             Tree,
             Intersection,
@@ -109,7 +109,7 @@ namespace ImprovedAssetsPanel
         private static readonly string kAssetEntryTemplate = "AssetEntryTemplate";
 
         private static List<UIButton> assetTypeButtons = new List<UIButton>();
-        private static Dictionary<AssetType, UILabel> assetTypeLabels = new Dictionary<AssetType,UILabel>(); 
+        private static Dictionary<AssetType, UILabel> assetTypeLabels = new Dictionary<AssetType, UILabel>();
 
         private static UIPanel newAssetsPanel;
         private static UIPanel[] assetRows;
@@ -186,7 +186,7 @@ namespace ImprovedAssetsPanel
                     if (hovered) return "SubBarPublicTransportPlaneHovered";
                     return "SubBarPublicTransportPlane";
                 case AssetType.UniqueBuilding:
-                    if(hovered) return "InfoIconLevelHovered";
+                    if (hovered) return "InfoIconLevelHovered";
                     return "InfoIconLevelFocused";
                 case AssetType.Monument:
                     if (hovered) return "ToolbarIconMonumentsHovered";
@@ -248,10 +248,10 @@ namespace ImprovedAssetsPanel
                 RefreshAssets();
             };
         }
-        
+
         public static void Revert()
         {
-            RedirectionHelper.RevertRedirect(typeof (ContentManagerPanel).GetMethod("Refresh",
+            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
                         BindingFlags.Instance | BindingFlags.NonPublic), state);
 
             UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
@@ -293,7 +293,7 @@ namespace ImprovedAssetsPanel
             _assetCache = new List<Package.Asset>();
 
             assetTypeButtons = new List<UIButton>();
-            assetTypeLabels = new Dictionary<AssetType,UILabel>(); 
+            assetTypeLabels = new Dictionary<AssetType, UILabel>();
 
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
             if (syncObject == null)
@@ -344,7 +344,7 @@ namespace ImprovedAssetsPanel
             {
                 return;
             }
-            
+
             var moarGroup = GameObject.Find("Assets").GetComponent<UIPanel>().Find<UIPanel>("MoarGroup");
 
             if (moarGroup == null)
@@ -362,7 +362,7 @@ namespace ImprovedAssetsPanel
             moarLabel.isVisible = false;
             moarButton.isVisible = false;
 
-            filterButtons = uiView.AddUIComponent(typeof (UIPanel)) as UIPanel;
+            filterButtons = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
             filterButtons.transform.parent = moarGroup.transform;
             filterButtons.size = new Vector2(600.0f, 32.0f);
 
@@ -457,7 +457,7 @@ namespace ImprovedAssetsPanel
 
                 assetTypeButtons.Add(button);
 
-                var label = uiView.AddUIComponent(typeof (UILabel)) as UILabel;
+                var label = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
                 label.text = "99";
                 label.AlignTo(button, UIAlignAnchor.TopRight);
                 label.relativePosition = new Vector3(16.0f, 0.0f, 0.0f);
@@ -556,7 +556,8 @@ namespace ImprovedAssetsPanel
                 if (sortOrder == SortOrder.Ascending)
                 {
                     sortOrder = SortOrder.Descending;
-                } else if (sortOrder == SortOrder.Descending)
+                }
+                else if (sortOrder == SortOrder.Descending)
                 {
                     sortOrder = SortOrder.Ascending;
                 }
@@ -587,7 +588,7 @@ namespace ImprovedAssetsPanel
 
                 var originalScrollPos = scrollPositionY;
                 scrollPositionY -= param.wheelDelta * 80.0f;
-                scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY-newAssetsPanel.size.y);
+                scrollPositionY = Mathf.Clamp(scrollPositionY, 0.0f, maxScrollPositionY - newAssetsPanel.size.y);
 
                 ScrollRows(originalScrollPos - scrollPositionY);
                 SwapRows();
@@ -602,7 +603,7 @@ namespace ImprovedAssetsPanel
             {
                 assetRows[q] = newAssetsPanel.AddUIComponent<UIPanel>();
                 assetRows[q].name = "AssetRow" + q;
-                assetRows[q].size = new Vector2(1200.0f, 173.0f);;
+                assetRows[q].size = new Vector2(1200.0f, 173.0f); ;
                 assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
                 y += assetRows[q].size.y;
             }
@@ -629,8 +630,8 @@ namespace ImprovedAssetsPanel
                     {
                         var viewSize = newAssetsPanel.size.y;
 
-                        var realRowIndex = (int)Mathf.Floor((scrollPositionY / viewSize) * (viewSize / (assetRows[0].size.y+2.0f)));
-                        var diff = scrollPositionY - realRowIndex * (assetRows[0].size.y+2.0f);
+                        var realRowIndex = (int)Mathf.Floor((scrollPositionY / viewSize) * (viewSize / (assetRows[0].size.y + 2.0f)));
+                        var diff = scrollPositionY - realRowIndex * (assetRows[0].size.y + 2.0f);
 
                         float _y = 0.0f;
                         for (int q = 0; q < 4; q++)
@@ -711,14 +712,14 @@ namespace ImprovedAssetsPanel
                     }
                 }
                 label.text = count.ToString();
-                
+
             }
         }
-    
+
 
         private static int rowCount
         {
-            get { return (int) Mathf.Ceil(_assetCache.Count/3.0f); }
+            get { return (int)Mathf.Ceil(_assetCache.Count / 3.0f); }
         }
 
         private static void ScrollRows(float yOffset)
@@ -735,7 +736,7 @@ namespace ImprovedAssetsPanel
             if (assetRows[0].relativePosition.y + assetRows[0].size.y + 2.0f < 0.0f)
             {
                 assetRows[0].relativePosition = new Vector3(0.0f, assetRows[3].relativePosition.y + assetRows[3].size.y + 2.0f);
-                var firstRealRow = (int)Mathf.Floor(scrollPositionY/(assetRows[0].size.y+2.0f));
+                var firstRealRow = (int)Mathf.Floor(scrollPositionY / (assetRows[0].size.y + 2.0f));
                 var lastRealRow = firstRealRow + 3;
                 DrawAssets(0, lastRealRow);
                 ShiftRowsUp();
@@ -808,7 +809,7 @@ namespace ImprovedAssetsPanel
             scrollbar.value = value;
         }
 
-         private static void IndexAssetType(Package.Asset asset)
+        private static void IndexAssetType(Package.Asset asset)
         {
             if (_assetTypeIndex.Keys.Contains(asset))
             {
@@ -1045,11 +1046,11 @@ namespace ImprovedAssetsPanel
             }
             else if (sortMode == SortMode.Active)
             {
-                comparerLambda = (a,b) => b.isEnabled.CompareTo(a.isEnabled);
+                comparerLambda = (a, b) => b.isEnabled.CompareTo(a.isEnabled);
             }
             else if (sortMode == SortMode.Favorite)
             {
-                comparerLambda = (a,b) => isFavorite(b).CompareTo(isFavorite(a));
+                comparerLambda = (a, b) => isFavorite(b).CompareTo(isFavorite(a));
             }
             else if (sortMode == SortMode.Location)
             {
@@ -1080,7 +1081,7 @@ namespace ImprovedAssetsPanel
                 return;
             }
             _assetCache.Sort(new FunctionalComparer<Package.Asset>(
-                sortOrder == SortOrder.Ascending ? comparerLambda : 
+                sortOrder == SortOrder.Ascending ? comparerLambda :
                 (a, b) => { return -comparerLambda(a, b); }));
 
         }
@@ -1093,7 +1094,7 @@ namespace ImprovedAssetsPanel
                 return;
             }
 
-            var numRows = (int)Mathf.Ceil(_assetCache.Count/3.0f);
+            var numRows = (int)Mathf.Ceil(_assetCache.Count / 3.0f);
             if (realRow > numRows - 1)
             {
                 return;
@@ -1108,7 +1109,7 @@ namespace ImprovedAssetsPanel
             var assetsCount = _assetCache.Count;
 
             float currentX = 0;
-            for (int i = realRow*3; i < Mathf.Min((realRow+1)*3, assetsCount); i++)
+            for (int i = realRow * 3; i < Mathf.Min((realRow + 1) * 3, assetsCount); i++)
             {
                 var packageEntry = UITemplateManager.Get<PackageEntry>(kAssetEntryTemplate);
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
@@ -1153,7 +1154,7 @@ namespace ImprovedAssetsPanel
                 newNameLabel.size = new Vector2(panelSizeX - 24.0f, panelSizeY - 2.0f);
                 newNameLabel.relativePosition = new Vector3(24.0f, 4.0f, nameLabel.relativePosition.z);
                 newNameLabel.isVisible = true;
-              
+
                 var delete = panel.Find<UIButton>("Delete");
                 delete.size = new Vector2(24.0f, 24.0f);
                 delete.relativePosition = new Vector3(panelSizeX - 28.0f, 2.0f, delete.relativePosition.z);
@@ -1249,7 +1250,7 @@ namespace ImprovedAssetsPanel
             }
 
             scrollPositionY = 0.0f;
-            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count/3.0f))*(assetRows[0].size.y+2.0f);
+            maxScrollPositionY = (Mathf.Ceil(_assetCache.Count / 3.0f)) * (assetRows[0].size.y + 2.0f);
             SetScrollBar(maxScrollPositionY, newAssetsPanel.size.y);
 
             DrawAssets(0, 0);

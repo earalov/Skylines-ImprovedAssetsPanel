@@ -47,7 +47,8 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        public void Clear(){
+        public void Clear()
+        {
             _dictionary.Clear();
         }
     }

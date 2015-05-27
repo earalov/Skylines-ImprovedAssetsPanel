@@ -11,7 +11,7 @@ namespace ImprovedAssetsPanel
             get
             {
                 ImprovedAssetsPanel.Bootstrap();
-                return "ImprovedAssetsPanel"; 
+                return "ImprovedAssetsPanel";
             }
         }
 
@@ -21,5 +21,5 @@ namespace ImprovedAssetsPanel
         }
 
     }
- 
+
 }

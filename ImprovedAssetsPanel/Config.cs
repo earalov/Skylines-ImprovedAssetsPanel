@@ -13,7 +13,7 @@ namespace ImprovedAssetsPanel
         [XmlIgnore]
         public Dictionary<UInt64, bool> favoriteAssets = new Dictionary<UInt64, bool>();
 
-        public List<UInt64> _favoriteAssets = new List<UInt64>(); 
+        public List<UInt64> _favoriteAssets = new List<UInt64>();
 
         public void OnPreSerialize()
         {
