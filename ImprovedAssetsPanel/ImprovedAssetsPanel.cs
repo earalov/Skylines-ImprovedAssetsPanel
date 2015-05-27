@@ -129,6 +129,9 @@ namespace ImprovedAssetsPanel
         private static AssetType _filterMode = AssetType.All;
         private static SortOrder _sortOrder = SortOrder.Ascending;
 
+        private const string KEntryTemplate = "EntryTemplate";
+        private const string KMapEntryTemplate = "MapEntryTemplate";
+        private const string KSaveEntryTemplate = "SaveEntryTemplate";
         private const string KAssetEntryTemplate = "AssetEntryTemplate";
 
         private static List<UIButton> _assetTypeButtons = new List<UIButton>();
@@ -143,6 +146,28 @@ namespace ImprovedAssetsPanel
 
         private static float _scrollPositionY;
         private static float _maxScrollPositionY;
+
+        internal static object GetInstanceField(Type type, object instance, string fieldName)
+        {
+            BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.Static;
+            FieldInfo field = type.GetField(fieldName, bindFlags);
+            return field.GetValue(instance);
+        }
+
+        public static void PerformSearch(string search)
+        {
+            var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
+            if (contentManagerPanel == null)
+            {
+                return;
+            }
+            var searchField = contentManagerPanel.Find<UITextField>("SearchField");
+            var index = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox).selectedIndex;
+            searchField.isVisible = index != 2;
+            var performSearch = contentManagerPanel.GetType().GetMethod("PerformSearch", BindingFlags.NonPublic | BindingFlags.Instance);
+            performSearch.Invoke(contentManagerPanel, new object[] { searchField.text });
+        }
 
         private static string GetSpriteNameForAssetType(AssetType assetType, bool hovered = false)
         {
@@ -207,7 +232,8 @@ namespace ImprovedAssetsPanel
             return "";
         }
 
-        private static RedirectCallsState _state;
+        private static RedirectCallsState _stateRefresh;
+        private static RedirectCallsState _statePerformSearch;
 
         public static void Bootstrap()
         {
@@ -227,24 +253,96 @@ namespace ImprovedAssetsPanel
 
             Initialize();
 
-            _state = RedirectionHelper.RedirectCalls
+            _stateRefresh = RedirectionHelper.RedirectCalls
             (
                 typeof(ContentManagerPanel).GetMethod("Refresh",
                     BindingFlags.Instance | BindingFlags.NonPublic),
-                typeof(ImprovedAssetsPanel).GetMethod("RefreshAssets",
+                typeof(ImprovedAssetsPanel).GetMethod("Refresh",
+                    BindingFlags.Static | BindingFlags.Public)
+            );
+
+            _statePerformSearch = RedirectionHelper.RedirectCalls
+            (
+                typeof(ContentManagerPanel).GetMethod("PerformSearch",
+                    BindingFlags.Instance | BindingFlags.NonPublic),
+                typeof(ImprovedAssetsPanel).GetMethod("PerformSearch",
                     BindingFlags.Static | BindingFlags.Public)
             );
 
             var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
-            contentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = RefreshAssets;
+            contentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
+        }
+
+        public static void Refresh()
+        {
+
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+            RefreshAllAssets(categoryContainer);
+            RefreshPackages(categoryContainer);
+            RefreshStandardCategory(categoryContainer, "Maps", UserAssetType.MapMetaData, KMapEntryTemplate);
+            RefreshStandardCategory(categoryContainer, "Saves", UserAssetType.SaveGameMetaData, KSaveEntryTemplate);
+            RefreshAssets(categoryContainer);
+        }
+
+        private static void RefreshStandardCategory(UITabContainer categoryContainer, string categoryName, Package.AssetType packageAssetType, string entryTemplate)
+        {
+            UITemplateManager.ClearInstances(entryTemplate);
+            var contentPanel = categoryContainer.Find(categoryName).Find("Content");
+            foreach (var current in PackageManager.FilterAssets(packageAssetType))
+            {
+                var packageEntry = UITemplateManager.Get<PackageEntry>(entryTemplate);
+                contentPanel.AttachUIComponent(packageEntry.gameObject);
+                SetupAssetPackageEntry(packageEntry, current);
+            }
+        }
+
+        private static void RefreshPackages(UITabContainer categoryContainer)
+        {
+            var component = categoryContainer.Find("Packages").Find("Content");
+            if (!component.isEnabled)
+            {
+                return;
+            }
+            foreach (var current in PackageManager.allPackages)
+            {
+                var packageEntry = UITemplateManager.Get<PackageEntry>(KEntryTemplate);
+                component.AttachUIComponent(packageEntry.gameObject);
+                packageEntry.entryName = current.packageName;
+                packageEntry.entryActive = true;
+                packageEntry.package = current;
+            }
+        }
+
+        private static void RefreshAllAssets(UITabContainer categoryContainer)
+        {
+            UITemplateManager.ClearInstances(KEntryTemplate);
+            var component = categoryContainer.Find("AllAssets").Find("Content");
+            if (!component.isEnabled)
+            {
+                return;
+            }
+            foreach (var current in PackageManager.allPackages)
+            {
+                foreach (Package.Asset asset in current)
+                {
+                    var packageEntry = UITemplateManager.Get<PackageEntry>(KEntryTemplate);
+                    component.AttachUIComponent(packageEntry.gameObject);
+                    packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(",
+                        asset.type, ")");
+                    packageEntry.entryActive = true;
+                    packageEntry.package = current;
+                }
+            }
         }
 
         public static void Revert()
         {
             RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
-                        BindingFlags.Instance | BindingFlags.NonPublic), _state);
+                        BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
+            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("PerformSearch",
+                        BindingFlags.Instance | BindingFlags.NonPublic), _statePerformSearch);
 
-            UITabContainer categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
 
             var scrollbar =
@@ -408,7 +506,7 @@ namespace ImprovedAssetsPanel
 
                     button.opacity = 1.0f;
                     ScrollAssetsList(0.0f);
-                    RefreshAssets();
+                    RefreshAssetsOnly();
                 };
 
                 _assetTypeButtons.Add(button);
@@ -445,7 +543,7 @@ namespace ImprovedAssetsPanel
                     item.isEnabled = true;
                 }
 
-                RefreshAssets();
+                RefreshAssetsOnly();
             };
 
             var deactivateAll = _additionalOptions.AddUIComponent<UIButton>();
@@ -466,7 +564,7 @@ namespace ImprovedAssetsPanel
                     item.isEnabled = false;
                 }
 
-                RefreshAssets();
+                RefreshAssetsOnly();
             };
 
             _sortOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
@@ -491,7 +589,7 @@ namespace ImprovedAssetsPanel
             {
                 _sortMode = (SortMode)value;
                 ScrollAssetsList(0.0f);
-                RefreshAssets();
+                RefreshAssetsOnly();
             };
 
             _sortOrderButton = _sortModePanel.AddUIComponent<UIButton>();
@@ -519,7 +617,7 @@ namespace ImprovedAssetsPanel
                         break;
                 }
                 _sortOrderButton.text = _sortOrder.GetEnumDescription();
-                RefreshAssets();
+                RefreshAssetsOnly();
             };
 
             _sortOrderLabel = InitializeLabel(uiView, _sortOptions, "Sort Order");
@@ -974,13 +1072,7 @@ namespace ImprovedAssetsPanel
 
                 var current = _assetCache[i];
 
-                packageEntry.entryName = String.Format("{0}.{1}\t({2})", current.package.packageName, current.name, current.type);
-
-                packageEntry.entryActive = current.isEnabled;
-                packageEntry.package = current.package;
-                packageEntry.asset = current;
-                packageEntry.publishedFileId = current.package.GetPublishedFileID();
-                packageEntry.RequestDetails();
+                SetupAssetPackageEntry(packageEntry, current);
 
                 var panel = packageEntry.gameObject.GetComponent<UIPanel>();
                 const float panelSizeX = 310.0f;
@@ -1072,29 +1164,28 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        private static void RefreshColorCorrectionsList()
+        private static void SetupAssetPackageEntry(PackageEntry packageEntry, Package.Asset asset)
         {
-            foreach (var current in PackageManager.FilterAssets(UserAssetType.ColorCorrection))
-            {
-                var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-                var assetsList = categoryContainer.Find("ColorCorrections").Find("Content");
-                var packageEntry = UITemplateManager.Get<PackageEntry>(KAssetEntryTemplate);
-                assetsList.AttachUIComponent(packageEntry.gameObject);
-                packageEntry.entryName = string.Concat(current.package.packageName, ".", current.name, "\t(",
-                    current.type, ")");
-                packageEntry.entryActive = current.isEnabled;
-                packageEntry.package = current.package;
-                packageEntry.asset = current;
-                packageEntry.publishedFileId = current.package.GetPublishedFileID();
-                packageEntry.RequestDetails();
-            }
+            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(",
+                        asset.type, ")");
+            packageEntry.entryActive = asset.isEnabled;
+            packageEntry.package = asset.package;
+            packageEntry.asset = asset;
+            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
+            packageEntry.RequestDetails();
         }
 
-        public static void RefreshAssets()
+        public static void RefreshAssetsOnly()
+        {
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
+            RefreshAssets(categoryContainer);
+        }
+
+        public static void RefreshAssets(UITabContainer categoryContainer)
         {
             UITemplateManager.ClearInstances(KAssetEntryTemplate);
 
-            RefreshColorCorrectionsList();
+            RefreshStandardCategory(categoryContainer, "ColorCorrections", UserAssetType.ColorCorrection, KAssetEntryTemplate);
             PreCacheAssets();
             SortCachedAssets();
             SetAssetCountLabels();
