@@ -535,7 +535,6 @@ namespace ImprovedAssetsPanel
             _newAssetsPanel.relativePosition = assetsList.relativePosition;
             _newAssetsPanel.name = "NewAssetsList";
             _newAssetsPanel.clipChildren = true;
-
             _newAssetsPanel.eventMouseWheel += (component, param) =>
             {
                 if (RowCount <= 2)
@@ -644,10 +643,6 @@ namespace ImprovedAssetsPanel
 
                 SetScrollBar(_scrollPositionY);
             };
-
-            assetsList.isVisible = false;
-            assetsList.verticalScrollbar = null;
-            _newAssetsPanel.isVisible = true;
         }
 
         private static UILabel InitializeLabel(UIView uiView, UIComponent parent, string labelText)
