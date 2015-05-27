@@ -41,34 +41,61 @@ namespace ImprovedAssetsPanel
         {
             Favorite,
             All,
-            Building,
-            Residential,
-            Commercial,
-            Industrial,
-            Office,
-            Prop,
-            Tree,
-            Intersection,
-            Park,
-            Electricity,
-            WaterAndSewage,
-            Garbage,
-            Healthcare,
-            Deathcare,
-            FireDepartment,
-            PoliceDepartment,
-            Education,
-            Transport,
-            TransportBus,
-            TransportMetro,
-            TransportTrain,
-            TransportShip,
-            TransportPlane,
-            UniqueBuilding,
-            Monument,
-            ColorLut,
-            Vehicle,
             Unknown,
+            [Description("Building")]
+            Building,
+            [Description("Residential")]
+            Residential,
+            [Description("Commercial")]
+            Commercial,
+            [Description("Industrial")]
+            Industrial,
+            [Description("Office")]
+            Office,
+            [Description("Prop")]
+            Prop,
+            [Description("Tree")]
+            Tree,
+            [Description("Intersection")]
+            Intersection,
+            [Description("Park")]
+            Park,
+            [Description("Electricity")]
+            Electricity,
+            [Description("Water & Sewage")]
+            WaterAndSewage,
+            [Description("Garbage")]
+            Garbage,
+            [Description("Healthcare")]
+            Healthcare,
+            [Description("Deathcare")]
+            Deathcare,
+            [Description("Fire Department")]
+            FireDepartment,
+            [Description("Police Department")]
+            PoliceDepartment,
+            [Description("Education")]
+            Education,
+            [Description("Transport")]
+            Transport,
+            [Description("Transport Bus")]
+            TransportBus,
+            [Description("Transport Metro")]
+            TransportMetro,
+            [Description("Transport Train")]
+            TransportTrain,
+            [Description("Transport Ship")]
+            TransportShip,
+            [Description("Transport Plane")]
+            TransportPlane,
+            [Description("Unique Building")]
+            UniqueBuilding,
+            [Description("Monument")]
+            Monument,
+            [Description("Color Correction LUT")]
+            ColorLut,
+            [Description("Vehicle")]
+            Vehicle
         }
 
         private const string ConfigPath = "ImprovedAssetsPanelConfig.xml";
@@ -309,7 +336,7 @@ namespace ImprovedAssetsPanel
             var x = 0.0f;
             foreach (var assetType in assetTypes)
             {
-                if (assetType == AssetType.Unknown || assetType == AssetType.ColorLut)
+                if (assetType == AssetType.ColorLut)
                 {
                     continue;
                 }
@@ -318,16 +345,19 @@ namespace ImprovedAssetsPanel
                 button.size = new Vector2(20.0f, 20.0f);
                 button.tooltip = assetType.ToString();
 
-                if (assetType != AssetType.All)
+                button.focusedFgSprite = button.normalFgSprite;
+                button.pressedFgSprite = button.normalFgSprite; 
+                if (assetType == AssetType.All)
+                {
+                    button.text = "ALL";
+                }
+                else if (assetType == AssetType.Unknown)
+                {
+                    button.text = "N/A"; 
+                } else
                 {
                     button.normalFgSprite = GetSpriteNameForAssetType(assetType);
                     button.hoveredFgSprite = GetSpriteNameForAssetType(assetType, true);
-                    button.focusedFgSprite = button.normalFgSprite;
-                    button.pressedFgSprite = button.normalFgSprite;
-                }
-                else if (assetType == AssetType.All)
-                {
-                    button.text = "ALL";
                 }
                 button.textScale = 0.5f;
                 button.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
@@ -479,13 +509,14 @@ namespace ImprovedAssetsPanel
             _sortOrderButton.relativePosition = new Vector3(0.0f, 16.0f);
             _sortOrderButton.eventClick += (component, param) =>
             {
-                if (_sortOrder == SortOrder.Ascending)
+                switch (_sortOrder)
                 {
-                    _sortOrder = SortOrder.Descending;
-                }
-                else if (_sortOrder == SortOrder.Descending)
-                {
-                    _sortOrder = SortOrder.Ascending;
+                    case SortOrder.Ascending:
+                        _sortOrder = SortOrder.Descending;
+                        break;
+                    case SortOrder.Descending:
+                        _sortOrder = SortOrder.Ascending;
+                        break;
                 }
                 _sortOrderButton.text = _sortOrder.GetEnumDescription();
                 RefreshAssets();
@@ -792,143 +823,21 @@ namespace ImprovedAssetsPanel
             }
 
             var tags = customAssetMetaData.steamTags;
-
-            if (ContainsTag(tags, "Intersection"))
+            foreach (AssetType assetType in Enum.GetValues(typeof(AssetType)))
             {
-                _assetTypeIndex.Add(asset, AssetType.Intersection);
+                if (assetType == AssetType.All || assetType == AssetType.Favorite || assetType == AssetType.Unknown)
+                {
+                    continue;
+                }
+                if (ContainsTag(tags, assetType.GetEnumDescription()))
+                {
+                    _assetTypeIndex.Add(asset, assetType);
+                }
             }
-
-            if (ContainsTag(tags, "Park"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Park);
-            }
-
-            if (ContainsTag(tags, "Electricity"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Electricity);
-            }
-
-            if (ContainsTag(tags, "Water & Sewage"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.WaterAndSewage);
-            }
-
-            if (ContainsTag(tags, "Garbage"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Garbage);
-            }
-
-            if (ContainsTag(tags, "Healthcare"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Healthcare);
-            }
-
-            if (ContainsTag(tags, "Deathcare"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Deathcare);
-            }
-
-            if (ContainsTag(tags, "Fire Department"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.FireDepartment);
-            }
-
-            if (ContainsTag(tags, "Police Department"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.PoliceDepartment);
-            }
-
-            if (ContainsTag(tags, "Transport Bus"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.TransportBus);
-            }
-
-            if (ContainsTag(tags, "Transport Metro"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.TransportMetro);
-            }
-
-            if (ContainsTag(tags, "Transport Train"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.TransportTrain);
-            }
-
-            if (ContainsTag(tags, "Transport Ship"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.TransportShip);
-            }
-
-            if (ContainsTag(tags, "Transport Plane"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.TransportPlane);
-            }
-
-            if (ContainsTag(tags, "Unique Building"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.UniqueBuilding);
-            }
-
-            if (ContainsTag(tags, "Monument"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Monument);
-            }
-
-            if (ContainsTag(tags, "Education"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Education);
-            }
-
-            if (ContainsTag(tags, "Transport"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Transport);
-            }
-
-            if (ContainsTag(tags, "Residential"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Residential);
-            }
-
-            if (ContainsTag(tags, "Commercial"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Commercial);
-            }
-
-            if (ContainsTag(tags, "Industrial"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Industrial);
-            }
-
-            if (ContainsTag(tags, "Office"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Office);
-            }
-
-            if (ContainsTag(tags, "Building"))
-            {
-                _assetTypeIndex.Add(asset, AssetType.Building);
-            }
-
-            if (customAssetMetaData.type == CustomAssetMetaData.Type.Prop)
-            {
-                _assetTypeIndex.Add(asset, AssetType.Prop);
-            }
-
-            if (customAssetMetaData.type == CustomAssetMetaData.Type.Tree)
-            {
-                _assetTypeIndex.Add(asset, AssetType.Tree);
-            }
-
-            if (customAssetMetaData.type == CustomAssetMetaData.Type.Vehicle)
-            {
-                _assetTypeIndex.Add(asset, AssetType.Vehicle);
-            }
-
-            if (customAssetMetaData.type == CustomAssetMetaData.Type.Unknown)
+            if (_assetTypeIndex[asset].Count == 0)
             {
                 _assetTypeIndex.Add(asset, AssetType.Unknown);
             }
-
-            _assetTypeIndex.Add(asset, AssetType.Unknown);
         }
 
         private static bool ContainsTag(string[] haystack, string needle)
