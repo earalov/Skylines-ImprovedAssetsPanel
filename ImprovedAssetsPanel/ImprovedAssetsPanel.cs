@@ -155,16 +155,25 @@ namespace ImprovedAssetsPanel
             return field.GetValue(instance);
         }
 
-        public static void PerformSearch(string search)
+
+        public static void OnCategoryChanged(UIComponent c, int idx)
         {
             var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
             if (contentManagerPanel == null)
             {
                 return;
             }
-            var searchField = contentManagerPanel.Find<UITextField>("SearchField");
             var index = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox).selectedIndex;
-            searchField.isVisible = index != 2;
+            var setContainerCategory = contentManagerPanel.GetType().GetMethod("SetContainerCategory", BindingFlags.NonPublic | BindingFlags.Instance);
+            setContainerCategory.Invoke(contentManagerPanel, new object[] { index });
+
+            var searchField = contentManagerPanel.Find<UITextField>("SearchField");
+            var notAssetPanel = index != 2;
+            searchField.isVisible = notAssetPanel;
+            if (!notAssetPanel)
+            {
+                return;
+            }
             var performSearch = contentManagerPanel.GetType().GetMethod("PerformSearch", BindingFlags.NonPublic | BindingFlags.Instance);
             performSearch.Invoke(contentManagerPanel, new object[] { searchField.text });
         }
@@ -263,9 +272,9 @@ namespace ImprovedAssetsPanel
 
             _statePerformSearch = RedirectionHelper.RedirectCalls
             (
-                typeof(ContentManagerPanel).GetMethod("PerformSearch",
+                typeof(ContentManagerPanel).GetMethod("OnCategoryChanged",
                     BindingFlags.Instance | BindingFlags.NonPublic),
-                typeof(ImprovedAssetsPanel).GetMethod("PerformSearch",
+                typeof(ImprovedAssetsPanel).GetMethod("OnCategoryChanged",
                     BindingFlags.Static | BindingFlags.Public)
             );
 
@@ -339,7 +348,7 @@ namespace ImprovedAssetsPanel
         {
             RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
                         BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
-            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("PerformSearch",
+            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("OnCategoryChanged",
                         BindingFlags.Instance | BindingFlags.NonPublic), _statePerformSearch);
 
             var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
