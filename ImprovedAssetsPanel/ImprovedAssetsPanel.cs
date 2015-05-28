@@ -988,24 +988,13 @@ namespace ImprovedAssetsPanel
         {
 
             Func<Package.Asset, Package.Asset, int> comparerLambda;
+            var alphabeticalSort = false;
 
             switch (_sortMode)
             {
                 case SortMode.Alphabetical:
-                    comparerLambda = (a, b) =>
-                    {
-                        if (a.name == null)
-                        {
-                            return 1;
-                        }
-
-                        if (b.name == null)
-                        {
-                            return -1;
-                        }
-
-                        return String.Compare(a.name, b.name, StringComparison.Ordinal);
-                    };
+                    comparerLambda = CompareNames;
+                    alphabeticalSort = true;
                     break;
                 case SortMode.LastUpdated:
                     comparerLambda = (a, b) => GetAssetLastModifiedDelta(a).CompareTo(GetAssetLastModifiedDelta(b));
@@ -1026,7 +1015,7 @@ namespace ImprovedAssetsPanel
                         var bIsWorkshop = b.package.packagePath.Contains("workshop");
                         if (aIsWorkshop && bIsWorkshop)
                         {
-                            return String.Compare(a.name, b.name, StringComparison.Ordinal);
+                            return 0;
                         }
 
                         if (aIsWorkshop)
@@ -1039,16 +1028,33 @@ namespace ImprovedAssetsPanel
                             return -1;
                         }
 
-                        return String.Compare(a.name, b.name, StringComparison.Ordinal);
+                        return 0;
                     };
                     break;
                 default:
                     return;
             }
-            _assetCache.Sort(new FunctionalComparer<Package.Asset>(
-                _sortOrder == SortOrder.Ascending ? comparerLambda :
-                (a, b) => -comparerLambda(a, b)));
+            _assetCache.Sort(new FunctionalComparer<Package.Asset>((a, b) =>
+            {
+                var diff = (_sortOrder == SortOrder.Ascending ? comparerLambda : (arg1, arg2) => -comparerLambda(arg1, arg2))(a,b);
+                return diff != 0 || alphabeticalSort ? diff : CompareNames(a, b);;
 
+            }));
+        }
+
+        private static int CompareNames(Package.Asset a, Package.Asset b)
+        {
+            if (a.name == null)
+            {
+                return 1;
+            }
+
+            if (b.name == null)
+            {
+                return -1;
+            }
+
+            return String.Compare(a.name, b.name, StringComparison.InvariantCultureIgnoreCase);
         }
 
         private static void DrawAssets(int virtualRow, int realRow)
