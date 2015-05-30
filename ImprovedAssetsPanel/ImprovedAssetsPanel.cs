@@ -42,59 +42,59 @@ namespace ImprovedAssetsPanel
             Favorite,
             All,
             Unknown,
-            [Description("Building")]
+            [Description(SteamHelper.kSteamTagBuilding)]
             Building,
-            [Description("Residential")]
+            [Description(SteamHelper.kSteamTagResidential)]
             Residential,
-            [Description("Commercial")]
+            [Description(SteamHelper.kSteamTagCommercial)]
             Commercial,
-            [Description("Industrial")]
+            [Description(SteamHelper.kSteamTagIndustrial)]
             Industrial,
-            [Description("Office")]
+            [Description(SteamHelper.kSteamTagOffice)]
             Office,
-            [Description("Prop")]
+            [Description(SteamHelper.kSteamTagProp)]
             Prop,
-            [Description("Tree")]
+            [Description(SteamHelper.kSteamTagTree)]
             Tree,
-            [Description("Intersection")]
+            [Description(SteamHelper.kSteamTagIntersection)]
             Intersection,
-            [Description("Park")]
+            [Description(SteamHelper.kSteamTagPark)]
             Park,
-            [Description("Electricity")]
+            [Description(SteamHelper.kSteamTagElectricity)]
             Electricity,
-            [Description("Water & Sewage")]
+            [Description(SteamHelper.kSteamTagWaterAndSewage)]
             WaterAndSewage,
-            [Description("Garbage")]
+            [Description(SteamHelper.kSteamTagGarbage)]
             Garbage,
-            [Description("Healthcare")]
+            [Description(SteamHelper.kSteamTagHealthcare)]
             Healthcare,
-            [Description("Deathcare")]
+            [Description(SteamHelper.kSteamTagDeathcare)]
             Deathcare,
-            [Description("Fire Department")]
+            [Description(SteamHelper.kSteamTagFireDepartment)]
             FireDepartment,
-            [Description("Police Department")]
+            [Description(SteamHelper.kSteamTagPoliceDepartment)]
             PoliceDepartment,
-            [Description("Education")]
+            [Description(SteamHelper.kSteamTagEducation)]
             Education,
-            [Description("Transport")]
+            [Description(SteamHelper.kSteamTagTransport)]
             Transport,
-            [Description("Transport Bus")]
+            [Description(SteamHelper.kSteamTagTransportBus)]
             TransportBus,
-            [Description("Transport Metro")]
+            [Description(SteamHelper.kSteamTagTransportMetro)]
             TransportMetro,
-            [Description("Transport Train")]
+            [Description(SteamHelper.kSteamTagTransportTrain)]
             TransportTrain,
-            [Description("Transport Ship")]
+            [Description(SteamHelper.kSteamTagTransportShip)]
             TransportShip,
-            [Description("Transport Plane")]
+            [Description(SteamHelper.kSteamTagTransportPlane)]
             TransportPlane,
-            [Description("Unique Building")]
+            [Description(SteamHelper.kSteamTagUniqueBuilding)]
             UniqueBuilding,
-            [Description("Monument")]
+            [Description(SteamHelper.kSteamTagMonument)]
             Monument,
-            [Description("Color Correction LUT")]
+            [Description(SteamHelper.kSteamTagColorCorrectionLUT)]
             ColorLut,
-            [Description("Vehicle")]
+            [Description(SteamHelper.kSteamTagVehicle)]
             Vehicle
         }
 
@@ -141,7 +141,6 @@ namespace ImprovedAssetsPanel
         private static UIPanel[] _assetRows;
 
         private static MultiMap<Package.Asset, AssetType> _assetTypeIndex = new MultiMap<Package.Asset, AssetType>();
-        private static Dictionary<Package.Asset, string> _assetPathCache = new Dictionary<Package.Asset, string>();
         private static List<Package.Asset> _assetCache = new List<Package.Asset>();
 
         private static float _scrollPositionY;
@@ -223,9 +222,9 @@ namespace ImprovedAssetsPanel
                 case AssetType.TransportPlane:
                     return hovered ? "SubBarPublicTransportPlaneHovered" : "SubBarPublicTransportPlane";
                 case AssetType.UniqueBuilding:
-                    return hovered ? "InfoIconLevelHovered" : "InfoIconLevelFocused";
-                case AssetType.Monument:
                     return hovered ? "ToolbarIconMonumentsHovered" : "ToolbarIconMonuments";
+                case AssetType.Monument:
+                    return hovered ? "ToolbarIconWondersHowered" : "ToolbarIconWonders";
                 case AssetType.Residential:
                     return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
                 case AssetType.Commercial:
@@ -242,7 +241,7 @@ namespace ImprovedAssetsPanel
         }
 
         private static RedirectCallsState _stateRefresh;
-        private static RedirectCallsState _statePerformSearch;
+        private static RedirectCallsState _stateOnCategoryChanged;
 
         public static void Bootstrap()
         {
@@ -270,7 +269,7 @@ namespace ImprovedAssetsPanel
                     BindingFlags.Static | BindingFlags.Public)
             );
 
-            _statePerformSearch = RedirectionHelper.RedirectCalls
+            _stateOnCategoryChanged = RedirectionHelper.RedirectCalls
             (
                 typeof(ContentManagerPanel).GetMethod("OnCategoryChanged",
                     BindingFlags.Instance | BindingFlags.NonPublic),
@@ -349,7 +348,7 @@ namespace ImprovedAssetsPanel
             RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
                         BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
             RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("OnCategoryChanged",
-                        BindingFlags.Instance | BindingFlags.NonPublic), _statePerformSearch);
+                        BindingFlags.Instance | BindingFlags.NonPublic), _stateOnCategoryChanged);
 
             var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
@@ -386,7 +385,6 @@ namespace ImprovedAssetsPanel
             _assetRows = null;
 
             _assetTypeIndex = new MultiMap<Package.Asset, AssetType>();
-            _assetPathCache = new Dictionary<Package.Asset, string>();
             _assetCache = new List<Package.Asset>();
 
             _assetTypeButtons = new List<UIButton>();
@@ -441,6 +439,8 @@ namespace ImprovedAssetsPanel
                     .Find<UIScrollbar>("Scrollbar");
 
             var x = 0.0f;
+            _assetTypeLabels = new Dictionary<AssetType, UILabel>();
+            _assetTypeButtons = new List<UIButton>();
             foreach (var assetType in assetTypes)
             {
                 if (assetType == AssetType.ColorLut)
