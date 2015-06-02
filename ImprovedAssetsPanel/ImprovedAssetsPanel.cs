@@ -154,27 +154,28 @@ namespace ImprovedAssetsPanel
             return field.GetValue(instance);
         }
 
-
-        public static void OnCategoryChanged(UIComponent c, int idx)
+        private class CategoryChanger
         {
-            var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
-            if (contentManagerPanel == null)
+            public void OnCategoryChanged(UIComponent c, int idx)
             {
-                return;
-            }
-            var index = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox).selectedIndex;
-            var setContainerCategory = contentManagerPanel.GetType().GetMethod("SetContainerCategory", BindingFlags.NonPublic | BindingFlags.Instance);
-            setContainerCategory.Invoke(contentManagerPanel, new object[] { index });
 
-            var searchField = contentManagerPanel.Find<UITextField>("SearchField");
-            var notAssetPanel = index != 2;
-            searchField.isVisible = notAssetPanel;
-            if (!notAssetPanel)
-            {
-                return;
+                UnityEngine.Debug.Log(c);
+                UnityEngine.Debug.Log(idx);
+                var contentManagerPanel = (ContentManagerPanel)Convert.ChangeType(this, typeof(ContentManagerPanel));
+                var index = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox).selectedIndex;
+                var setContainerCategory = contentManagerPanel.GetType().GetMethod("SetContainerCategory", BindingFlags.NonPublic | BindingFlags.Instance);
+                setContainerCategory.Invoke(contentManagerPanel, new object[] { index });
+
+                var searchField = contentManagerPanel.Find<UITextField>("SearchField");
+                var notAssetPanel = index != 2;
+                searchField.isVisible = notAssetPanel;
+                if (!notAssetPanel)
+                {
+                    return;
+                }
+                var performSearch = contentManagerPanel.GetType().GetMethod("PerformSearch", BindingFlags.NonPublic | BindingFlags.Instance);
+                performSearch.Invoke(contentManagerPanel, new object[] { searchField.text });
             }
-            var performSearch = contentManagerPanel.GetType().GetMethod("PerformSearch", BindingFlags.NonPublic | BindingFlags.Instance);
-            performSearch.Invoke(contentManagerPanel, new object[] { searchField.text });
         }
 
         private static string GetSpriteNameForAssetType(AssetType assetType, bool hovered = false)
@@ -273,8 +274,8 @@ namespace ImprovedAssetsPanel
             (
                 typeof(ContentManagerPanel).GetMethod("OnCategoryChanged",
                     BindingFlags.Instance | BindingFlags.NonPublic),
-                typeof(ImprovedAssetsPanel).GetMethod("OnCategoryChanged",
-                    BindingFlags.Static | BindingFlags.Public)
+                typeof(CategoryChanger).GetMethod("OnCategoryChanged",
+                    BindingFlags.Instance | BindingFlags.Public)
             );
 
             var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
@@ -962,7 +963,7 @@ namespace ImprovedAssetsPanel
 
         private static void PreCacheAssets()
         {
-            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList();
+            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList().Where(asset => asset.isMainAsset).ToList();
             ReIndexAssets(assets);
 
             switch (_filterMode)
