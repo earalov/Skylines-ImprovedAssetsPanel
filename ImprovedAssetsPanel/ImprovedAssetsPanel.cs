@@ -180,7 +180,6 @@ namespace ImprovedAssetsPanel
 
             public void PerformSearch(string search)
             {
-                Debug.Log(String.Format("Perform search: \"{0}\"", search));
                 var contentManagerPanel = (ContentManagerPanel)Convert.ChangeType(this, typeof(ContentManagerPanel));
                 if (contentManagerPanel == null)
                 {
@@ -369,12 +368,7 @@ namespace ImprovedAssetsPanel
             {
                 var packageEntry = UITemplateManager.Get<PackageEntry>(entryTemplate);
                 contentPanel.AttachUIComponent(packageEntry.gameObject);
-                //SetupAssetPackageEntry(ref packageEntry, asset);
-                packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
-                packageEntry.entryActive = asset.isEnabled;
-                packageEntry.package = asset.package;
-                packageEntry.asset = asset;
-                packageEntry.publishedFileId = asset.package.GetPublishedFileID();
+                SetupAssetPackageEntry(ref packageEntry, asset);
                 packageEntry.RequestDetails();
             }
         }
@@ -1168,14 +1162,6 @@ namespace ImprovedAssetsPanel
 
                 var asset = _assetCache[_displayedAssets[i]];
 
-                //SetupAssetPackageEntry(ref packageEntry, asset);
-                packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
-                packageEntry.entryActive = asset.isEnabled;
-                packageEntry.package = asset.package;
-                packageEntry.asset = asset;
-                packageEntry.publishedFileId = asset.package.GetPublishedFileID();
-                packageEntry.RequestDetails();
-
                 var panel = packageEntry.gameObject.GetComponent<UIPanel>();
                 const float panelSizeX = 310.0f;
                 const float panelSizeY = 173.0f;
@@ -1225,12 +1211,8 @@ namespace ImprovedAssetsPanel
                 favButton.focusedFgSprite = "InfoIconHealth";
                 favButton.size = new Vector2(36.0f, 36.0f);
                 favButton.relativePosition = new Vector3(panelSizeX - 42.0f, panelSizeY - 62.0f);
-
-                var isFavorite = _config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
-                favButton.opacity = isFavorite ? 1.0f : 0.25f;
                 favButton.zOrder = 7;
                 favButton.tooltip = "Set/ unset favorite";
-
                 favButton.eventClick += (uiComponent, param) =>
                 {
                     if (_config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
@@ -1263,18 +1245,23 @@ namespace ImprovedAssetsPanel
                 share.size = new Vector2(80.0f, 24.0f);
                 share.textScale = 0.7f;
                 share.relativePosition = new Vector3(4.0f + view.size.x, panelSizeY - 28.0f, share.relativePosition.z);
+
+                SetupAssetPackageEntry(ref packageEntry, asset);
+                var isFavorite = _config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
+                favButton.opacity = isFavorite ? 1.0f : 0.25f;
+                packageEntry.component.Show();
+                packageEntry.RequestDetails();
             }
         }
 
-//        private static void SetupAssetPackageEntry(ref PackageEntry packageEntry, Package.Asset asset)
-//        {
-//            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
-//            packageEntry.entryActive = asset.isEnabled;
-//            packageEntry.package = asset.package;
-//            packageEntry.asset = asset;
-//            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
-//            packageEntry.RequestDetails();
-//        }
+        private static void SetupAssetPackageEntry(ref PackageEntry packageEntry, Package.Asset asset)
+        {
+            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
+            packageEntry.entryActive = asset.isEnabled;
+            packageEntry.package = asset.package;
+            packageEntry.asset = asset;
+            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
+        }
 
         public static void RefreshAssetsOnly()
         {
@@ -1334,7 +1321,7 @@ namespace ImprovedAssetsPanel
         {
             try
             {
-                return DateTime.Now - File.GetLastWriteTime(asset.pathOnDisk);
+                return DateTime.Now - File.GetLastWriteTime(asset.package.packagePath);
             }
             catch (Exception)
             {
@@ -1346,7 +1333,7 @@ namespace ImprovedAssetsPanel
         {
             try
             {
-                return DateTime.Now - File.GetCreationTime(asset.pathOnDisk);
+                return DateTime.Now - File.GetCreationTime(asset.package.packagePath);
             }
             catch (Exception)
             {
