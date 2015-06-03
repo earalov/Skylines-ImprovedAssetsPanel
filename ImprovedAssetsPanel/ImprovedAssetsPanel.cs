@@ -159,11 +159,13 @@ namespace ImprovedAssetsPanel
         private static UIPanel _newAssetsPanel;
         private static UIPanel[] _assetRows;
 
-        private static MultiMap<Package.Asset, AssetType> _assetTypeIndex = new MultiMap<Package.Asset, AssetType>();
-        private static List<Package.Asset> _assetCache = new List<Package.Asset>();
+        private static MultiMap<Guid, AssetType> _assetTypeIndex = new MultiMap<Guid, AssetType>();
+        private static Dictionary<Guid, Package.Asset> _assetCache = new Dictionary<Guid, Package.Asset>();
+        private static List<Guid> _displayedAssets = new List<Guid>();
 
         private static float _scrollPositionY;
         private static float _maxScrollPositionY;
+        private static string _searchString = "";
 
         internal static object GetInstanceField(Type type, object instance, string fieldName)
         {
@@ -179,7 +181,6 @@ namespace ImprovedAssetsPanel
             public void PerformSearch(string search)
             {
                 Debug.Log(String.Format("Perform search: \"{0}\"", search));
-                Debug.Log(search);
                 var contentManagerPanel = (ContentManagerPanel)Convert.ChangeType(this, typeof(ContentManagerPanel));
                 if (contentManagerPanel == null)
                 {
@@ -221,7 +222,8 @@ namespace ImprovedAssetsPanel
                 }
                 else
                 {
-                    //TODO(earalov): perform search
+                    _searchString = search;
+                    RedrawAssets();
                 }
             }
         }
@@ -356,18 +358,24 @@ namespace ImprovedAssetsPanel
             RefreshPackages(categoryContainer);
             RefreshStandardCategory(categoryContainer, "Maps", UserAssetType.MapMetaData, KMapEntryTemplate);
             RefreshStandardCategory(categoryContainer, "Saves", UserAssetType.SaveGameMetaData, KSaveEntryTemplate);
-            RefreshAssets(categoryContainer);
+            RefreshAssetsOnly();
         }
 
         private static void RefreshStandardCategory(UITabContainer categoryContainer, string categoryName, Package.AssetType packageAssetType, string entryTemplate)
         {
             UITemplateManager.ClearInstances(entryTemplate);
             var contentPanel = categoryContainer.Find(categoryName).Find("Content");
-            foreach (var current in PackageManager.FilterAssets(packageAssetType))
+            foreach (var asset in PackageManager.FilterAssets(packageAssetType))
             {
                 var packageEntry = UITemplateManager.Get<PackageEntry>(entryTemplate);
                 contentPanel.AttachUIComponent(packageEntry.gameObject);
-                SetupAssetPackageEntry(packageEntry, current);
+                //SetupAssetPackageEntry(ref packageEntry, asset);
+                packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
+                packageEntry.entryActive = asset.isEnabled;
+                packageEntry.package = asset.package;
+                packageEntry.asset = asset;
+                packageEntry.publishedFileId = asset.package.GetPublishedFileID();
+                packageEntry.RequestDetails();
             }
         }
 
@@ -446,14 +454,16 @@ namespace ImprovedAssetsPanel
             _sortOrderButton = null;
             _sortOrderLabel = null;
 
+            _searchString = "";
             _sortMode = SortMode.Alphabetical;
             _filterMode = AssetType.All;
             _sortOrder = SortOrder.Ascending;
             _newAssetsPanel = null;
             _assetRows = null;
 
-            _assetTypeIndex = new MultiMap<Package.Asset, AssetType>();
-            _assetCache = new List<Package.Asset>();
+            _assetTypeIndex = new MultiMap<Guid, AssetType>();
+            _assetCache = new Dictionary<Guid, Package.Asset>();
+            _displayedAssets = new List<Guid>();
 
             _assetTypeButtons = new List<UIButton>();
             _assetTypeLabels = new Dictionary<AssetType, UILabel>();
@@ -463,6 +473,7 @@ namespace ImprovedAssetsPanel
             {
                 Destroy(syncObject);
             }
+
         }
 
 
@@ -481,7 +492,7 @@ namespace ImprovedAssetsPanel
             {
                 return;
             }
-
+            _searchString = "";
             var uiView = FindObjectOfType<UIView>();
 
             var moarLabel = moarGroup.Find<UILabel>("Moar");
@@ -591,8 +602,7 @@ namespace ImprovedAssetsPanel
                     }
 
                     button.opacity = 1.0f;
-                    ScrollAssetsList(0.0f);
-                    RefreshAssetsOnly();
+                    RedrawAssets();
                 };
 
                 _assetTypeButtons.Add(button);
@@ -624,7 +634,7 @@ namespace ImprovedAssetsPanel
             activateAll.relativePosition = new Vector3(4.0f, 0.0f);
             activateAll.eventClick += (component, param) =>
             {
-                foreach (var item in _assetCache)
+                foreach (var item in _assetCache.Values)
                 {
                     item.isEnabled = true;
                 }
@@ -645,7 +655,7 @@ namespace ImprovedAssetsPanel
             deactivateAll.relativePosition = new Vector3(4.0f, 18.0f);
             deactivateAll.eventClick += (component, param) =>
             {
-                foreach (var item in _assetCache)
+                foreach (var item in _assetCache.Values)
                 {
                     item.isEnabled = false;
                 }
@@ -674,8 +684,7 @@ namespace ImprovedAssetsPanel
             sortModeDropDown.eventSelectedIndexChanged += (component, value) =>
             {
                 _sortMode = (SortMode)value;
-                ScrollAssetsList(0.0f);
-                RefreshAssetsOnly();
+                RedrawAssets();
             };
 
             _sortOrderButton = _sortModePanel.AddUIComponent<UIButton>();
@@ -703,7 +712,7 @@ namespace ImprovedAssetsPanel
                         break;
                 }
                 _sortOrderButton.text = _sortOrder.GetEnumDescription();
-                RefreshAssetsOnly();
+                RedrawAssets();
             };
 
             _sortOrderLabel = InitializeLabel(uiView, _sortOptions, "Sort Order");
@@ -784,7 +793,7 @@ namespace ImprovedAssetsPanel
                     _y += _assetRows[q].size.y + 2.0f;
                 }
 
-                var rowsCount = (int)Mathf.Ceil(_assetCache.Count / 3.0f);
+                var rowsCount = (int)Mathf.Ceil(_displayedAssets.Count / 3.0f);
 
                 for (var q = 0; q < Mathf.Min(rowsCount, 4); q++)
                 {
@@ -977,9 +986,9 @@ namespace ImprovedAssetsPanel
             scrollbar.value = value;
         }
 
-        private static void IndexAssetType(Package.Asset asset)
+        private static void IndexAssetType(Guid guid, Package.Asset asset)
         {
-            if (_assetTypeIndex.Keys.Contains(asset))
+            if (_assetTypeIndex.Keys.Contains(guid))
             {
                 return;
             }
@@ -997,7 +1006,7 @@ namespace ImprovedAssetsPanel
 
             if (customAssetMetaData == null)
             {
-                _assetTypeIndex.Add(asset, AssetType.Unknown);
+                _assetTypeIndex.Add(guid, AssetType.Unknown);
                 return;
             }
 
@@ -1010,12 +1019,12 @@ namespace ImprovedAssetsPanel
                 }
                 if (ContainsTag(tags, assetType.GetEnumDescription()))
                 {
-                    _assetTypeIndex.Add(asset, assetType);
+                    _assetTypeIndex.Add(guid, assetType);
                 }
             }
-            if (_assetTypeIndex[asset].Count == 0)
+            if (_assetTypeIndex[guid].Count == 0)
             {
-                _assetTypeIndex.Add(asset, AssetType.Unknown);
+                _assetTypeIndex.Add(guid, AssetType.Unknown);
             }
         }
 
@@ -1028,32 +1037,27 @@ namespace ImprovedAssetsPanel
             return haystack.Contains(needle);
         }
 
-        private static void ReIndexAssets(List<Package.Asset> assets)
+        private static void ReIndexAssets()
         {
             _assetTypeIndex.Clear();
-            foreach (var asset in assets)
+            foreach (var kvp in _assetCache.ToList())
             {
-                IndexAssetType(asset);
+                IndexAssetType(kvp.Key, kvp.Value);
             }
         }
 
-        private static void PreCacheAssets()
+        private static List<Guid> FilterAssetsByName(Dictionary<Guid, Package.Asset> assets)
         {
-            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList().Where(asset => asset.isMainAsset).ToList();
-            ReIndexAssets(assets);
+            return assets.Where(kvp => IsMatch(kvp.Value)).Select(entry => entry.Key).ToList();
+        }
 
-            switch (_filterMode)
+        private static bool IsMatch(Package.Asset asset)
+        {
+            if ((_searchString != string.Empty) && (asset.name.IndexOf(_searchString, StringComparison.InvariantCultureIgnoreCase) == -1))
             {
-                case AssetType.All:
-                    _assetCache = assets;
-                    break;
-                case AssetType.Favorite:
-                    _assetCache = assets.FindAll(asset => _config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64));
-                    break;
-                default:
-                    _assetCache = assets.FindAll(asset => _assetTypeIndex[asset].Contains(_filterMode));
-                    break;
+                return asset.package.packageAuthor.IndexOf(_searchString, StringComparison.InvariantCultureIgnoreCase) != -1;
             }
+            return true;
         }
 
         private static bool IsFavorite(Package.Asset asset)
@@ -1061,7 +1065,7 @@ namespace ImprovedAssetsPanel
             return _config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64);
         }
 
-        private static void SortCachedAssets()
+        private static void SortDisplayedAssets()
         {
 
             Func<Package.Asset, Package.Asset, int> comparerLambda;
@@ -1111,10 +1115,10 @@ namespace ImprovedAssetsPanel
                 default:
                     return;
             }
-            _assetCache.Sort(new FunctionalComparer<Package.Asset>((a, b) =>
+            _displayedAssets.Sort(new FunctionalComparer<Guid>((a, b) =>
             {
-                var diff = (_sortOrder == SortOrder.Ascending ? comparerLambda : (arg1, arg2) => -comparerLambda(arg1, arg2))(a, b);
-                return diff != 0 || alphabeticalSort ? diff : CompareNames(a, b); ;
+                var diff = (_sortOrder == SortOrder.Ascending ? comparerLambda : (arg1, arg2) => -comparerLambda(arg1, arg2))(_assetCache[a], _assetCache[b]);
+                return diff != 0 || alphabeticalSort ? diff : CompareNames(_assetCache[a], _assetCache[b]); ;
 
             }));
         }
@@ -1142,7 +1146,7 @@ namespace ImprovedAssetsPanel
                 return;
             }
 
-            var numRows = (int)Mathf.Ceil(_assetCache.Count / 3.0f);
+            var numRows = (int)Mathf.Ceil(_displayedAssets.Count / 3.0f);
             if (realRow > numRows - 1)
             {
                 return;
@@ -1154,7 +1158,7 @@ namespace ImprovedAssetsPanel
                 Destroy(currentPanel.transform.GetChild(i).gameObject);
             }
 
-            var assetsCount = _assetCache.Count;
+            var assetsCount = _displayedAssets.Count;
 
             float currentX = 0;
             for (var i = realRow * 3; i < Mathf.Min((realRow + 1) * 3, assetsCount); i++)
@@ -1162,9 +1166,15 @@ namespace ImprovedAssetsPanel
                 var packageEntry = UITemplateManager.Get<PackageEntry>(KAssetEntryTemplate);
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
 
-                var current = _assetCache[i];
+                var asset = _assetCache[_displayedAssets[i]];
 
-                SetupAssetPackageEntry(packageEntry, current);
+                //SetupAssetPackageEntry(ref packageEntry, asset);
+                packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
+                packageEntry.entryActive = asset.isEnabled;
+                packageEntry.package = asset.package;
+                packageEntry.asset = asset;
+                packageEntry.publishedFileId = asset.package.GetPublishedFileID();
+                packageEntry.RequestDetails();
 
                 var panel = packageEntry.gameObject.GetComponent<UIPanel>();
                 const float panelSizeX = 310.0f;
@@ -1185,7 +1195,7 @@ namespace ImprovedAssetsPanel
 
                 var newNameLabel = panel.AddUIComponent<UILabel>();
                 newNameLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
-                newNameLabel.text = current.name;
+                newNameLabel.text = asset.name;
                 newNameLabel.zOrder = 7;
                 newNameLabel.textColor = Color.white;
                 newNameLabel.autoHeight = false;
@@ -1217,7 +1227,7 @@ namespace ImprovedAssetsPanel
                 favButton.relativePosition = new Vector3(panelSizeX - 42.0f, panelSizeY - 62.0f);
 
                 var isFavorite = _config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
-                favButton.opacity = isFavorite ? 1.0f : 0.5f;
+                favButton.opacity = isFavorite ? 1.0f : 0.25f;
                 favButton.zOrder = 7;
                 favButton.tooltip = "Set/ unset favorite";
 
@@ -1226,7 +1236,7 @@ namespace ImprovedAssetsPanel
                     if (_config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
                     {
                         _config.favoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
-                        favButton.opacity = 0.5f;
+                        favButton.opacity = 0.25f;
                     }
                     else
                     {
@@ -1235,7 +1245,7 @@ namespace ImprovedAssetsPanel
                     }
 
                     SaveConfig();
-                    ReIndexAssets(_assetCache);
+                    ReIndexAssets();
                     SetAssetCountLabels();
                 };
 
@@ -1256,32 +1266,52 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        private static void SetupAssetPackageEntry(PackageEntry packageEntry, Package.Asset asset)
-        {
-            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(",
-                        asset.type, ")");
-            packageEntry.entryActive = asset.isEnabled;
-            packageEntry.package = asset.package;
-            packageEntry.asset = asset;
-            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
-            packageEntry.RequestDetails();
-        }
+//        private static void SetupAssetPackageEntry(ref PackageEntry packageEntry, Package.Asset asset)
+//        {
+//            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
+//            packageEntry.entryActive = asset.isEnabled;
+//            packageEntry.package = asset.package;
+//            packageEntry.asset = asset;
+//            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
+//            packageEntry.RequestDetails();
+//        }
 
         public static void RefreshAssetsOnly()
         {
-            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            RefreshAssets(categoryContainer);
+            var assets = PackageManager.FilterAssets(UserAssetType.CustomAssetMetaData).ToList().Where(asset => asset.isMainAsset).ToList();
+            _assetCache.Clear();
+            foreach (var asset in assets)
+            {
+                _assetCache.Add(Guid.NewGuid(), asset);
+            }
+            ReIndexAssets();
+            SetAssetCountLabels();
+            RedrawAssets();
         }
 
-        public static void RefreshAssets(UITabContainer categoryContainer)
+        private static void RedrawAssets()
         {
             UITemplateManager.ClearInstances(KAssetEntryTemplate);
-
+            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             RefreshStandardCategory(categoryContainer, "ColorCorrections", UserAssetType.ColorCorrection, KAssetEntryTemplate);
-            PreCacheAssets();
-            SortCachedAssets();
-            SetAssetCountLabels();
+            switch (_filterMode)
+            {
+                case AssetType.All:
+                    _displayedAssets = FilterAssetsByName(_assetCache);
+                    break;
+                case AssetType.Favorite:
+                    _displayedAssets = FilterAssetsByName(_assetCache.Where(
+                        kvp => _config.favoriteAssets.ContainsKey(kvp.Value.package.GetPublishedFileID().AsUInt64)).ToDictionary(p => p.Key, p => p.Value));
+                    break;
+                default:
+                    _displayedAssets = FilterAssetsByName(_assetCache.Where(
+                        kvp => _assetTypeIndex[kvp.Key].Contains(_filterMode)).ToDictionary(p => p.Key, p => p.Value));
+                    break;
+            }
+            SortDisplayedAssets();
 
+
+            ScrollAssetsList(0.0f);
             var y = 0.0f;
 
             for (var q = 0; q < 4; q++)
@@ -1291,7 +1321,7 @@ namespace ImprovedAssetsPanel
             }
 
             _scrollPositionY = 0.0f;
-            _maxScrollPositionY = (Mathf.Ceil(_assetCache.Count / 3.0f)) * (_assetRows[0].size.y + 2.0f);
+            _maxScrollPositionY = (Mathf.Ceil(_displayedAssets.Count / 3.0f)) * (_assetRows[0].size.y + 2.0f);
             SetScrollBar(_maxScrollPositionY, _newAssetsPanel.size.y);
 
             DrawAssets(0, 0);
