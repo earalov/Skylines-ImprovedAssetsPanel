@@ -47,10 +47,28 @@ namespace ImprovedAssetsPanel
             Building,
             [Description(SteamHelper.kSteamTagResidential)]
             Residential,
+            [Description(SteamHelper.kSteamTagResidentialLow)]
+            ResidentialLow,
+            [Description(SteamHelper.kSteamTagResidentialHigh)]
+            ResidentialHigh,
             [Description(SteamHelper.kSteamTagCommercial)]
             Commercial,
+            [Description(SteamHelper.kSteamTagCommercialLow)]
+            CommercialLow,
+            [Description(SteamHelper.kSteamTagCommercialHigh)]
+            CommercialHigh,
             [Description(SteamHelper.kSteamTagIndustrial)]
             Industrial,
+            [Description(SteamHelper.kSteamTagIndustrialGeneric)]
+            IndustrialGeneric,
+            [Description(SteamHelper.kSteamTagIndustrialOil)]
+            IndustrialOil,
+            [Description(SteamHelper.kSteamTagIndustrialOre)]
+            IndustrialOre,
+            [Description(SteamHelper.kSteamTagIndustrialForestry)]
+            IndustrialForestry,
+            [Description(SteamHelper.kSteamTagIndustrialFarming)]
+            IndustrialFarming,
             [Description(SteamHelper.kSteamTagOffice)]
             Office,
             [Description(SteamHelper.kSteamTagProp)]
@@ -160,7 +178,7 @@ namespace ImprovedAssetsPanel
 
             public void PerformSearch(string search)
             {
-                Debug.Log(String.Format("Perform search: \"%0\"", search));
+                Debug.Log(String.Format("Perform search: \"{0}\"", search));
                 Debug.Log(search);
                 var contentManagerPanel = (ContentManagerPanel)Convert.ChangeType(this, typeof(ContentManagerPanel));
                 if (contentManagerPanel == null)
@@ -219,11 +237,11 @@ namespace ImprovedAssetsPanel
                 case AssetType.Prop:
                     return hovered ? "ToolbarIconPropsHovered" : "ToolbarIconProps";
                 case AssetType.Tree:
-                    return hovered ? "IconPolicyForestHovered" : "IconPolicyForest";
+                    return hovered ? "ToolbarIconBeautificationHovered" : "ToolbarIconBeautification";
                 case AssetType.Intersection:
                     return hovered ? "ThumbnailJunctionsCloverFocused" : "ThumbnailJunctionsClover";
                 case AssetType.Park:
-                    return hovered ? "ToolbarIconBeautificationHovered" : "ToolbarIconBeautification";
+                    return hovered ? "SubBarBeautificationParksnPlazasHovered" : "SubBarBeautificationParksnPlazasPressed";
                 case AssetType.Electricity:
                     return hovered ? "InfoIconElectricityHovered" : "InfoIconElectricity";
                 case AssetType.WaterAndSewage:
@@ -258,10 +276,28 @@ namespace ImprovedAssetsPanel
                     return hovered ? "ToolbarIconWondersHowered" : "ToolbarIconWonders";
                 case AssetType.Residential:
                     return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
+                case AssetType.ResidentialLow:
+                    return hovered ? "IconPolicyTaxRaiseResLowHovered" : "IconPolicyTaxRaiseResLow";
+                case AssetType.ResidentialHigh:
+                    return hovered ? "IconPolicyTaxRaiseResHighHovered" : "IconPolicyTaxRaiseResHigh";
                 case AssetType.Commercial:
                     return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
+                case AssetType.CommercialLow:
+                    return hovered ? "IconPolicySmallBusinessHovered" : "IconPolicySmallBusiness";
+                case AssetType.CommercialHigh:
+                    return hovered ? "IconPolicyBigBusinessHovered" : "IconPolicyBigBusiness";
                 case AssetType.Industrial:
                     return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
+                case AssetType.IndustrialGeneric:
+                    return hovered ? "IconPolicyNoneHovered" : "IconPolicyNone";
+                case AssetType.IndustrialOre:
+                    return hovered ? "IconPolicyOreHovered" : "IconPolicyOre";
+                case AssetType.IndustrialOil:
+                    return hovered ? "IconPolicyOilHovered" : "IconPolicyOil";
+                case AssetType.IndustrialFarming:
+                    return hovered ? "IconPolicyFarmingHovered" : "IconPolicyFarming";
+                case AssetType.IndustrialForestry:
+                    return hovered ? "IconPolicyForestHovered" : "IconPolicyForest";
                 case AssetType.Office:
                     return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
                 case AssetType.Vehicle:
@@ -475,7 +511,7 @@ namespace ImprovedAssetsPanel
             _assetTypeLabels = new Dictionary<AssetType, UILabel>();
             _assetTypeButtons = new List<UIButton>();
             var count = 0;
-            var columnCount = assetTypes.Length / 2 + assetTypes.Length % 2;
+            var columnCount = ((assetTypes.Length - 1) / 2) + ((assetTypes.Length - 1) % 2); //-1 because no LUT
             foreach (var assetType in assetTypes)
             {
                 if (assetType == AssetType.ColorLut)
@@ -513,7 +549,7 @@ namespace ImprovedAssetsPanel
                 button.AlignTo(_buttonsPanel, UIAlignAnchor.TopLeft);
 
 
-                button.relativePosition = new Vector3((buttonHeight + 2.0f) * ((count - 1) % columnCount), buttonHeight * buttonsRow);
+                button.relativePosition = new Vector3((buttonHeight + 2.0f) * ((count - 1) % columnCount), (buttonHeight * buttonsRow) - 2.0f);
 
 
                 if (assetType == AssetType.Residential)
