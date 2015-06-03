@@ -7,6 +7,7 @@ using ColossalFramework.Packaging;
 using ColossalFramework.UI;
 using UnityEngine;
 using System.ComponentModel;
+using ColossalFramework;
 
 namespace ImprovedAssetsPanel
 {
@@ -117,7 +118,7 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        private static UIPanel _filterButtons;
+        private static UIPanel _buttonsPanel;
         private static UIPanel _sortModePanel;
         private static UILabel _sortModeLabel;
         private static UIButton _sortOrderButton;
@@ -154,27 +155,56 @@ namespace ImprovedAssetsPanel
             return field.GetValue(instance);
         }
 
-        private class CategoryChanger
+        private class SearchPerformer
         {
-            public void OnCategoryChanged(UIComponent c, int idx)
+
+            public void PerformSearch(string search)
             {
-
-                UnityEngine.Debug.Log(c);
-                UnityEngine.Debug.Log(idx);
+                Debug.Log(String.Format("Perform search: \"%0\"", search));
+                Debug.Log(search);
                 var contentManagerPanel = (ContentManagerPanel)Convert.ChangeType(this, typeof(ContentManagerPanel));
-                var index = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox).selectedIndex;
-                var setContainerCategory = contentManagerPanel.GetType().GetMethod("SetContainerCategory", BindingFlags.NonPublic | BindingFlags.Instance);
-                setContainerCategory.Invoke(contentManagerPanel, new object[] { index });
-
-                var searchField = contentManagerPanel.Find<UITextField>("SearchField");
-                var notAssetPanel = index != 2;
-                searchField.isVisible = notAssetPanel;
-                if (!notAssetPanel)
+                if (contentManagerPanel == null)
                 {
+                    Debug.LogWarning("Perform search: ContentManagerPanel is null!");
                     return;
                 }
-                var performSearch = contentManagerPanel.GetType().GetMethod("PerformSearch", BindingFlags.NonPublic | BindingFlags.Instance);
-                performSearch.Invoke(contentManagerPanel, new object[] { searchField.text });
+                var categories =
+                    (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox);
+                if (categories == null)
+                {
+                    Debug.LogWarning("Perform search: Categories are null!");
+                    return;
+                }
+                var index = categories.selectedIndex;
+                var categoriesContainer = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_CategoriesContainer") as UITabContainer);
+                if (categoriesContainer == null)
+                {
+                    Debug.LogWarning("Perform search: Categories container is null!");
+                    return;
+                }
+                var assetsList = categoriesContainer.components[index].Find("Content");
+                if (assetsList == null)
+                {
+                    Debug.LogWarning("Perform search: AssetsList is null!");
+                    return;
+                }
+                var notAssetPanel = index != 2;
+                if (notAssetPanel)
+                {
+                    foreach (var item in assetsList.components)
+                    {
+                        if (item == null)
+                        {
+                            continue;
+                        }
+                        var component = item.GetComponent<PackageEntry>();
+                        item.isVisible = component == null || component.IsMatch(search);
+                    }
+                }
+                else
+                {
+                    //TODO(earalov): perform search
+                }
             }
         }
 
@@ -242,7 +272,7 @@ namespace ImprovedAssetsPanel
         }
 
         private static RedirectCallsState _stateRefresh;
-        private static RedirectCallsState _stateOnCategoryChanged;
+        private static RedirectCallsState _statePerformSearch;
 
         public static void Bootstrap()
         {
@@ -270,13 +300,13 @@ namespace ImprovedAssetsPanel
                     BindingFlags.Static | BindingFlags.Public)
             );
 
-            _stateOnCategoryChanged = RedirectionHelper.RedirectCalls
-            (
-                typeof(ContentManagerPanel).GetMethod("OnCategoryChanged",
-                    BindingFlags.Instance | BindingFlags.NonPublic),
-                typeof(CategoryChanger).GetMethod("OnCategoryChanged",
-                    BindingFlags.Instance | BindingFlags.Public)
-            );
+            _statePerformSearch = RedirectionHelper.RedirectCalls
+                (
+                    typeof(ContentManagerPanel).GetMethod("PerformSearch",
+                        BindingFlags.Instance | BindingFlags.NonPublic),
+                    typeof(SearchPerformer).GetMethod("PerformSearch",
+                        BindingFlags.Instance | BindingFlags.Public)
+                );
 
             var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
             contentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
@@ -348,8 +378,9 @@ namespace ImprovedAssetsPanel
         {
             RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
                         BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
-            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("OnCategoryChanged",
-                        BindingFlags.Instance | BindingFlags.NonPublic), _stateOnCategoryChanged);
+            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("PerformSearch",
+                        BindingFlags.Instance | BindingFlags.NonPublic),
+        _statePerformSearch);
 
             var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
@@ -366,12 +397,12 @@ namespace ImprovedAssetsPanel
             Destroy(_sortModeLabel.gameObject);
             Destroy(_sortOrderButton.gameObject);
             Destroy(_sortOrderLabel.gameObject);
-            Destroy(_filterButtons.gameObject);
+            Destroy(_buttonsPanel.gameObject);
             Destroy(_additionalOptions.gameObject);
             Destroy(_sortOptions.gameObject);
             Destroy(_newAssetsPanel.gameObject);
 
-            _filterButtons = null;
+            _buttonsPanel = null;
             _additionalOptions = null;
             _sortOptions = null;
             _sortModePanel = null;
@@ -425,9 +456,11 @@ namespace ImprovedAssetsPanel
             moarLabel.isVisible = false;
             moarButton.isVisible = false;
 
-            _filterButtons = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
-            _filterButtons.transform.parent = moarGroup.transform;
-            _filterButtons.size = new Vector2(600.0f, 32.0f);
+            const float buttonHeight = 18.0f;
+
+            _buttonsPanel = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
+            _buttonsPanel.transform.parent = moarGroup.transform;
+            _buttonsPanel.size = new Vector2(600.0f, buttonHeight * 2);
 
             var assetTypes = (AssetType[])Enum.GetValues(typeof(AssetType));
 
@@ -439,9 +472,10 @@ namespace ImprovedAssetsPanel
                     .transform.parent.GetComponent<UIComponent>()
                     .Find<UIScrollbar>("Scrollbar");
 
-            var x = 0.0f;
             _assetTypeLabels = new Dictionary<AssetType, UILabel>();
             _assetTypeButtons = new List<UIButton>();
+            var count = 0;
+            var columnCount = assetTypes.Length / 2 + assetTypes.Length % 2;
             foreach (var assetType in assetTypes)
             {
                 if (assetType == AssetType.ColorLut)
@@ -449,32 +483,38 @@ namespace ImprovedAssetsPanel
                     continue;
                 }
 
-                var button = uiView.AddUIComponent(typeof(UIButton)) as UIButton;
-                button.size = new Vector2(20.0f, 20.0f);
+                count++;
+                var buttonsRow = count <= columnCount ? 0 : 1;
+                var button = _buttonsPanel.AddUIComponent(typeof(UIButton)) as UIButton;
+                button.size = new Vector2(buttonHeight, buttonHeight);
                 button.tooltip = assetType.ToString();
 
                 button.focusedFgSprite = button.normalFgSprite;
-                button.pressedFgSprite = button.normalFgSprite; 
-                if (assetType == AssetType.All)
+                button.pressedFgSprite = button.normalFgSprite;
+                switch (assetType)
                 {
-                    button.text = "ALL";
-                }
-                else if (assetType == AssetType.Unknown)
-                {
-                    button.text = "N/A"; 
-                } else
-                {
-                    button.normalFgSprite = GetSpriteNameForAssetType(assetType);
-                    button.hoveredFgSprite = GetSpriteNameForAssetType(assetType, true);
+                    case AssetType.All:
+                        button.text = "ALL";
+                        break;
+                    case AssetType.Unknown:
+                        button.text = "N/A";
+                        break;
+                    default:
+                        button.normalFgSprite = GetSpriteNameForAssetType(assetType);
+                        button.hoveredFgSprite = GetSpriteNameForAssetType(assetType, true);
+                        break;
                 }
                 button.textScale = 0.5f;
                 button.foregroundSpriteMode = UIForegroundSpriteMode.Scale;
                 button.scaleFactor = 1.0f;
                 button.isVisible = true;
-                button.transform.parent = _filterButtons.transform;
-                button.AlignTo(_filterButtons, UIAlignAnchor.TopLeft);
-                button.relativePosition = new Vector3(x, 0.0f);
-                x += 22.0f;
+
+                button.transform.parent = _buttonsPanel.transform;
+                button.AlignTo(_buttonsPanel, UIAlignAnchor.TopLeft);
+
+
+                button.relativePosition = new Vector3((buttonHeight + 2.0f) * ((count - 1) % columnCount), buttonHeight * buttonsRow);
+
 
                 if (assetType == AssetType.Residential)
                 {
@@ -1037,8 +1077,8 @@ namespace ImprovedAssetsPanel
             }
             _assetCache.Sort(new FunctionalComparer<Package.Asset>((a, b) =>
             {
-                var diff = (_sortOrder == SortOrder.Ascending ? comparerLambda : (arg1, arg2) => -comparerLambda(arg1, arg2))(a,b);
-                return diff != 0 || alphabeticalSort ? diff : CompareNames(a, b);;
+                var diff = (_sortOrder == SortOrder.Ascending ? comparerLambda : (arg1, arg2) => -comparerLambda(arg1, arg2))(a, b);
+                return diff != 0 || alphabeticalSort ? diff : CompareNames(a, b); ;
 
             }));
         }
