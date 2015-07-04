@@ -369,7 +369,24 @@ namespace ImprovedAssetsPanel
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
             if (syncObject == null)
             {
-                new GameObject("ImprovedAssetsPanelSyncObject").AddComponent<UpdateHook>().onUnityDestroy = Revert;
+                syncObject = new GameObject("ImprovedAssetsPanelSyncObject");
+                syncObject.AddComponent<UpdateHook>().onUnityDestroy = Revert;
+                var updateHook = syncObject.AddComponent<UpdateHook>();
+                updateHook.once = false;
+                updateHook.onUnityUpdate = () =>
+                {
+                    var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
+                    if (contentManagerPanel == null)
+                    {
+                        return;
+                    }
+                    Initialize();
+                    contentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
+                    updateHook.once = true;
+                };
+
+
+
             }
             else
             {
@@ -379,8 +396,6 @@ namespace ImprovedAssetsPanel
             new GameObject().AddComponent<ImprovedAssetsPanel>().name = "ImprovedAssetsPanel";
 
             LoadConfig();
-
-            Initialize();
 
             _stateRefresh = RedirectionHelper.RedirectCalls
             (
@@ -405,9 +420,6 @@ namespace ImprovedAssetsPanel
                     typeof(SearchPerformer).GetMethod("ToggleActiveCategory",
                         BindingFlags.Instance | BindingFlags.NonPublic)
                 );
-
-            var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
-            contentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
         }
 
         public static void Refresh()
@@ -498,9 +510,6 @@ _stateToggleActiveCategory);
                             assetsList.isVisible = true;
             }
                 
-
-
-
 
             Destroy(_sortModePanel.gameObject);
             Destroy(_sortModeLabel.gameObject);
