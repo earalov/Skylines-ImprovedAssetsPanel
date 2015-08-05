@@ -370,37 +370,37 @@ namespace ImprovedAssetsPanel
         public static void Bootstrap()
         {
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
-            if (syncObject == null)
-            {
-                syncObject = new GameObject("ImprovedAssetsPanelSyncObject");
-                syncObject.AddComponent<UpdateHook>().onUnityDestroy = Revert;
-                var updateHook = syncObject.AddComponent<UpdateHook>();
-                updateHook.once = false;
-                updateHook.onUnityUpdate = () =>
-                {
-                    if (Singleton<LoadingManager>.instance.m_loadedEnvironment == null)
-                    {
-                        var contentManagerPanelGameObject = GameObject.Find("(Library) ContentManagerPanel");
-                        if (contentManagerPanelGameObject == null)
-                        {
-                            return;
-                        }
-                        var contentManagerPanel = contentManagerPanelGameObject.GetComponent<ContentManagerPanel>();
-                        if (contentManagerPanel == null)
-                        {
-                            return;
-                        }
-                        Initialize();
-                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
-                    }
-                    updateHook.once = true;
-                };
-
-            }
-            else
+            if (syncObject != null)
             {
                 return;
             }
+            syncObject = new GameObject("ImprovedAssetsPanelSyncObject");
+            syncObject.AddComponent<UpdateHook>().onUnityDestroy = Revert;
+            var updateHook = syncObject.AddComponent<UpdateHook>();
+            updateHook.once = false;
+            updateHook.onUnityUpdate = () =>
+            {
+                if (Singleton<LoadingManager>.instance.m_loadedEnvironment == null)
+                {
+                    var contentManagerPanelGameObject = GameObject.Find("(Library) ContentManagerPanel");
+                    if (contentManagerPanelGameObject == null)
+                    {
+                        return;
+                    }
+                    var contentManagerPanel = contentManagerPanelGameObject.GetComponent<ContentManagerPanel>();
+                    if (contentManagerPanel == null)
+                    {
+                        return;
+                    }
+                    Initialize();
+                    contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
+                }
+                else
+                {
+                    Destroy(syncObject);
+                }
+                updateHook.once = true;
+            };
 
             LoadConfig();
 
@@ -494,20 +494,21 @@ namespace ImprovedAssetsPanel
 
         public static void Revert()
         {
-            if (_stateRefresh != null) { 
-            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
-                    BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
+            if (_stateRefresh != null)
+            {
+                RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
+                        BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
                 _stateRefresh = null;
             }
             if (_statePerformSearch != null)
             {
                 RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("PerformSearch",
                     BindingFlags.Instance | BindingFlags.NonPublic), _statePerformSearch);
-                _statePerformSearch = null;  
+                _statePerformSearch = null;
             }
             if (_stateToggleActiveCategory != null)
             {
-                RedirectionHelper.RevertRedirect(typeof (ContentManagerPanel).GetMethod("ToggleActiveCategory",
+                RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("ToggleActiveCategory",
                     BindingFlags.Instance | BindingFlags.NonPublic), _stateToggleActiveCategory);
                 _stateToggleActiveCategory = null;
             }
@@ -522,13 +523,13 @@ namespace ImprovedAssetsPanel
                     .transform.parent.GetComponent<UIComponent>()
                     .Find<UIScrollbar>("Scrollbar");
 
-                            assetsList.verticalScrollbar = scrollbar;
-                            assetsList.isVisible = true;
+                assetsList.verticalScrollbar = scrollbar;
+                assetsList.isVisible = true;
             }
 
             if (_sortModePanel != null)
             {
-                Destroy(_sortModePanel.gameObject);                
+                Destroy(_sortModePanel.gameObject);
                 _sortModePanel = null;
             }
             if (_sortModeLabel != null)
@@ -538,7 +539,7 @@ namespace ImprovedAssetsPanel
             }
             if (_sortOrderButton != null)
             {
-                Destroy(_sortOrderButton.gameObject);  
+                Destroy(_sortOrderButton.gameObject);
                 _sortOrderButton = null;
             }
             if (_sortOrderLabel != null)
@@ -1369,20 +1370,16 @@ namespace ImprovedAssetsPanel
             }
             SortDisplayedAssets();
 
-
             ScrollAssetsList(0.0f);
             var y = 0.0f;
-
             for (var q = 0; q < 4; q++)
             {
                 _assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
                 y += _assetRows[q].size.y + 2.0f;
             }
-
             _scrollPositionY = 0.0f;
             _maxScrollPositionY = (Mathf.Ceil(_displayedAssets.Count / 3.0f)) * (_assetRows[0].size.y + 2.0f);
             SetScrollBar(_maxScrollPositionY, _newAssetsPanel.size.y);
-
             DrawAssets(0, 0);
             DrawAssets(1, 1);
             DrawAssets(2, 2);
