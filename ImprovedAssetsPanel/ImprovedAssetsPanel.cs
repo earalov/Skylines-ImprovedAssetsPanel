@@ -123,7 +123,10 @@ namespace ImprovedAssetsPanel
         private static void LoadConfig()
         {
             _config = Configuration.Deserialize(ConfigPath);
-            if (_config != null) return;
+            if (_config != null)
+            {
+                return;
+            }
             _config = new Configuration();
             SaveConfig();
         }
@@ -375,25 +378,29 @@ namespace ImprovedAssetsPanel
                 updateHook.once = false;
                 updateHook.onUnityUpdate = () =>
                 {
-                    var contentManagerPanel = GameObject.Find("(Library) ContentManagerPanel").GetComponent<ContentManagerPanel>();
-                    if (contentManagerPanel == null)
+                    if (Singleton<LoadingManager>.instance.m_loadedEnvironment == null)
                     {
-                        return;
+                        var contentManagerPanelGameObject = GameObject.Find("(Library) ContentManagerPanel");
+                        if (contentManagerPanelGameObject == null)
+                        {
+                            return;
+                        }
+                        var contentManagerPanel = contentManagerPanelGameObject.GetComponent<ContentManagerPanel>();
+                        if (contentManagerPanel == null)
+                        {
+                            return;
+                        }
+                        Initialize();
+                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
                     }
-                    Initialize();
-                    contentManagerPanel.gameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
                     updateHook.once = true;
                 };
-
-
 
             }
             else
             {
                 return;
             }
-
-            new GameObject().AddComponent<ImprovedAssetsPanel>().name = "ImprovedAssetsPanel";
 
             LoadConfig();
 
@@ -487,14 +494,23 @@ namespace ImprovedAssetsPanel
 
         public static void Revert()
         {
+            if (_stateRefresh != null) { 
             RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
-                        BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
-            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("PerformSearch",
-                        BindingFlags.Instance | BindingFlags.NonPublic),
-        _statePerformSearch);
-            RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("ToggleActiveCategory",
-            BindingFlags.Instance | BindingFlags.NonPublic),
-_stateToggleActiveCategory);
+                    BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
+                _stateRefresh = null;
+            }
+            if (_statePerformSearch != null)
+            {
+                RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("PerformSearch",
+                    BindingFlags.Instance | BindingFlags.NonPublic), _statePerformSearch);
+                _statePerformSearch = null;  
+            }
+            if (_stateToggleActiveCategory != null)
+            {
+                RedirectionHelper.RevertRedirect(typeof (ContentManagerPanel).GetMethod("ToggleActiveCategory",
+                    BindingFlags.Instance | BindingFlags.NonPublic), _stateToggleActiveCategory);
+                _stateToggleActiveCategory = null;
+            }
 
             var categoryContainerObj = GameObject.Find("CategoryContainer");
             if (categoryContainerObj != null)
@@ -509,28 +525,47 @@ _stateToggleActiveCategory);
                             assetsList.verticalScrollbar = scrollbar;
                             assetsList.isVisible = true;
             }
-                
 
-            Destroy(_sortModePanel.gameObject);
-            Destroy(_sortModeLabel.gameObject);
-            Destroy(_sortOrderButton.gameObject);
-            Destroy(_sortOrderLabel.gameObject);
-            Destroy(_buttonsPanel.gameObject);
-            Destroy(_sortOptions.gameObject);
-            Destroy(_newAssetsPanel.gameObject);
-
-            _buttonsPanel = null;
-            _sortOptions = null;
-            _sortModePanel = null;
-            _sortModeLabel = null;
-            _sortOrderButton = null;
-            _sortOrderLabel = null;
-
+            if (_sortModePanel != null)
+            {
+                Destroy(_sortModePanel.gameObject);                
+                _sortModePanel = null;
+            }
+            if (_sortModeLabel != null)
+            {
+                Destroy(_sortModeLabel.gameObject);
+                _sortModeLabel = null;
+            }
+            if (_sortOrderButton != null)
+            {
+                Destroy(_sortOrderButton.gameObject);  
+                _sortOrderButton = null;
+            }
+            if (_sortOrderLabel != null)
+            {
+                Destroy(_sortOrderLabel.gameObject);
+                _sortOrderLabel = null;
+            }
+            if (_buttonsPanel != null)
+            {
+                Destroy(_buttonsPanel.gameObject);
+                _buttonsPanel = null;
+            }
+            if (_sortOptions != null)
+            {
+                Destroy(_sortOptions.gameObject);
+                _sortOptions = null;
+            }
+            if (_newAssetsPanel != null)
+            {
+                Destroy(_newAssetsPanel.gameObject);
+                _newAssetsPanel = null;
+            }
             _searchString = "";
             _sortMode = SortMode.Alphabetical;
             _filterMode = AssetType.All;
             _sortOrder = SortOrder.Ascending;
-            _newAssetsPanel = null;
+
             _assetRows = null;
 
             _assetTypeIndex = new MultiMap<Guid, AssetType>();
@@ -737,7 +772,7 @@ _stateToggleActiveCategory);
             };
 
             _sortOrderLabel = InitializeLabel(uiView, _sortOrderButton, "Sort Order");
-            _sortOrderLabel.relativePosition = new Vector3(0.0f,-2.0f, 0.0f);
+            _sortOrderLabel.relativePosition = new Vector3(0.0f, -2.0f, 0.0f);
 
 
             assetsList.verticalScrollbar = null;
