@@ -365,6 +365,7 @@ namespace ImprovedAssetsPanel
         private static RedirectCallsState _stateRefresh;
         private static RedirectCallsState _statePerformSearch;
         private static RedirectCallsState _stateToggleActiveCategory;
+        private static bool _ui_initialized;
 
 
         public static void Bootstrap()
@@ -382,18 +383,20 @@ namespace ImprovedAssetsPanel
             {
                 if (Singleton<LoadingManager>.instance.m_loadedEnvironment == null)
                 {
-                    var contentManagerPanelGameObject = GameObject.Find("(Library) ContentManagerPanel");
-                    if (contentManagerPanelGameObject == null)
+                    if (!_ui_initialized)
                     {
-                        return;
+                        var contentManagerPanelGameObject = GameObject.Find("(Library) ContentManagerPanel");
+                        if (contentManagerPanelGameObject == null)
+                        {
+                            return;
+                        }
+                        var contentManagerPanel = contentManagerPanelGameObject.GetComponent<ContentManagerPanel>();
+                        if (contentManagerPanel == null)
+                        {
+                            return;
+                        }
+                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
                     }
-                    var contentManagerPanel = contentManagerPanelGameObject.GetComponent<ContentManagerPanel>();
-                    if (contentManagerPanel == null)
-                    {
-                        return;
-                    }
-                    Initialize();
-                    contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
                 }
                 else
                 {
@@ -402,36 +405,44 @@ namespace ImprovedAssetsPanel
                 updateHook.once = true;
             };
 
+            if (Singleton<LoadingManager>.instance.m_loadedEnvironment != null)
+            {
+                return;
+            }
             LoadConfig();
 
             _stateRefresh = RedirectionHelper.RedirectCalls
-            (
-                typeof(ContentManagerPanel).GetMethod("Refresh",
-                    BindingFlags.Instance | BindingFlags.NonPublic),
-                typeof(ImprovedAssetsPanel).GetMethod("Refresh",
-                    BindingFlags.Static | BindingFlags.Public)
-            );
+                (
+                    typeof (ContentManagerPanel).GetMethod("Refresh",
+                        BindingFlags.Instance | BindingFlags.NonPublic),
+                    typeof (ImprovedAssetsPanel).GetMethod("Refresh",
+                        BindingFlags.Static | BindingFlags.Public)
+                );
 
             _statePerformSearch = RedirectionHelper.RedirectCalls
                 (
-                    typeof(ContentManagerPanel).GetMethod("PerformSearch",
+                    typeof (ContentManagerPanel).GetMethod("PerformSearch",
                         BindingFlags.Instance | BindingFlags.NonPublic),
-                    typeof(SearchPerformer).GetMethod("PerformSearch",
+                    typeof (SearchPerformer).GetMethod("PerformSearch",
                         BindingFlags.Instance | BindingFlags.Public)
                 );
 
             _stateToggleActiveCategory = RedirectionHelper.RedirectCalls
                 (
-                    typeof(ContentManagerPanel).GetMethod("ToggleActiveCategory",
+                    typeof (ContentManagerPanel).GetMethod("ToggleActiveCategory",
                         BindingFlags.Instance | BindingFlags.NonPublic),
-                    typeof(SearchPerformer).GetMethod("ToggleActiveCategory",
+                    typeof (SearchPerformer).GetMethod("ToggleActiveCategory",
                         BindingFlags.Instance | BindingFlags.NonPublic)
                 );
         }
 
         public static void Refresh()
         {
-
+            if (!_ui_initialized)
+            {
+                Initialize();
+                _ui_initialized = true;
+            }
             var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
             RefreshAllAssets(categoryContainer);
             RefreshPackages(categoryContainer);
@@ -494,6 +505,7 @@ namespace ImprovedAssetsPanel
 
         public static void Revert()
         {
+            _ui_initialized = false;
             if (_stateRefresh != null)
             {
                 RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
