@@ -1247,7 +1247,7 @@ namespace ImprovedAssetsPanel
                 var image = panel.Find<UITextureSprite>("Image");
                 image.size = panel.size - new Vector2(4.0f, 2.0f);
 
-                image.position = new Vector3(0.0f, image.position.y, image.position.z);
+                image.position = new Vector3(0.0f, image.position.y + 13.0f, image.position.z);
 
                 var nameLabel = panel.Find<UILabel>("Name");
                 nameLabel.isVisible = false;
@@ -1269,13 +1269,22 @@ namespace ImprovedAssetsPanel
                 var steamTags = panel.Find<UILabel>("SteamTags");
                 if (steamTags != null)
                 {
-                    steamTags.isVisible = false;
+                    steamTags.textScale = 0.7f;
+                    steamTags.zOrder = 7;
+                    steamTags.AlignTo(panel, UIAlignAnchor.TopLeft);
+                    steamTags.width = panelSizeX;
+                    steamTags.height = 10;
+                    steamTags.color = Color.white;
+                    steamTags.relativePosition = new Vector3(4.0f, 24.0f);
                 }
 
                 var lastUpdateLabel = panel.Find<UILabel>("LastUpdate");
                 if (lastUpdateLabel != null)
                 {
                     lastUpdateLabel.textScale = 0.7f;
+                    lastUpdateLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
+                    lastUpdateLabel.zOrder = 7;
+                    lastUpdateLabel.relativePosition = new Vector3(4.0f, 60.0f);
                 }
 
                 var delete = panel.Find<UIButton>("Delete");
@@ -1289,7 +1298,7 @@ namespace ImprovedAssetsPanel
                 active.tooltip = "Activate/ deactivate asset";
 
                 var favButton = panel.AddUIComponent<UIButton>();
-                favButton.anchor = UIAnchorStyle.Bottom | UIAnchorStyle.Right;
+                favButton.AlignTo(panel, UIAlignAnchor.TopLeft);
                 favButton.normalFgSprite = "InfoIconHealth";
                 favButton.hoveredFgSprite = "InfoIconHealthHovered";
                 favButton.pressedFgSprite = "InfoIconHealthPressed";
@@ -1327,9 +1336,29 @@ namespace ImprovedAssetsPanel
 
                 var share = panel.Find<UIButton>("Share");
                 share.zOrder = 7;
+                share.AlignTo(panel, UIAlignAnchor.TopLeft);
                 share.size = new Vector2(80.0f, 24.0f);
                 share.textScale = 0.7f;
                 share.relativePosition = new Vector3(4.0f + view.size.x, panelSizeY - 28.0f, share.relativePosition.z);
+
+                var styleStuff = panel.Find<UIPanel>("StyleStuff");
+                if (styleStuff != null)
+                {
+                    var button = styleStuff.Find<UIButton>("Button");
+                    button.transform.parent = panel.transform;
+                    button.zOrder = 7;
+                    button.AlignTo(panel, UIAlignAnchor.TopLeft);
+                    button.relativePosition = new Vector3(88.0f + view.size.x, panelSizeY - 28.0f, button.relativePosition.z);
+
+                    var count = styleStuff.Find<UILabel>("StyleCount");
+                    count.transform.parent = panel.transform;
+                    count.textScale = 0.7f;
+                    count.AlignTo(panel, UIAlignAnchor.TopLeft);
+                    count.relativePosition = new Vector3(4.0f, 36.0f, count.relativePosition.z);
+
+                    styleStuff.size = new Vector2(0,0);
+                }
+
 
                 SetupAssetPackageEntry(ref packageEntry, asset);
                 var isFavorite = _config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
