@@ -154,6 +154,7 @@ namespace ImprovedAssetsPanel
         private const string KMapEntryTemplate = "MapEntryTemplate";
         private const string KSaveEntryTemplate = "SaveEntryTemplate";
         private const string KAssetEntryTemplate = "AssetEntryTemplate";
+        private const string KStyleEntryTemplate = "StyleEntryTemplate";
 
         private static List<UIButton> _assetTypeButtons = new List<UIButton>();
         private static Dictionary<AssetType, UILabel> _assetTypeLabels = new Dictionary<AssetType, UILabel>();
@@ -448,6 +449,7 @@ namespace ImprovedAssetsPanel
             RefreshPackages(categoryContainer);
             RefreshStandardCategory(categoryContainer, "Maps", UserAssetType.MapMetaData, KMapEntryTemplate);
             RefreshStandardCategory(categoryContainer, "Saves", UserAssetType.SaveGameMetaData, KSaveEntryTemplate);
+            RefreshStandardCategory(categoryContainer, "Styles", UserAssetType.DistrictStyleMetaData, KStyleEntryTemplate);
             RefreshAssetsOnly();
         }
 
