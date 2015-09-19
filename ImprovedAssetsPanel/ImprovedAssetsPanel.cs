@@ -1246,27 +1246,24 @@ namespace ImprovedAssetsPanel
 
                 currentX += panel.size.x;
 
+
                 var image = panel.Find<UITextureSprite>("Image");
                 image.size = panel.size - new Vector2(4.0f, 2.0f);
-
                 image.position = new Vector3(0.0f, image.position.y + 13.0f, image.position.z);
+
+
+                var active = panel.Find<UICheckBox>("Active");
+                active.relativePosition = new Vector3(4.0f, 4.0f, active.relativePosition.z);
+                active.zOrder = 7;
+                active.tooltip = "Activate/ deactivate asset";
+
+                var onOff = active.Find<UILabel>("OnOff");
+                onOff.text = asset.name;
+                onOff.size = new Vector2(panelSizeX - 24.0f, panelSizeY - 2.0f);
+
 
                 var nameLabel = panel.Find<UILabel>("Name");
                 nameLabel.isVisible = false;
-
-                var newNameLabel = panel.AddUIComponent<UILabel>();
-                newNameLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
-                newNameLabel.text = asset.name;
-                newNameLabel.zOrder = 7;
-                newNameLabel.textColor = Color.white;
-                newNameLabel.autoHeight = false;
-                newNameLabel.autoSize = false;
-                newNameLabel.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
-                newNameLabel.textAlignment = UIHorizontalAlignment.Left;
-                newNameLabel.verticalAlignment = UIVerticalAlignment.Top;
-                newNameLabel.size = new Vector2(panelSizeX - 24.0f, panelSizeY - 2.0f);
-                newNameLabel.relativePosition = new Vector3(24.0f, 4.0f, nameLabel.relativePosition.z);
-                newNameLabel.isVisible = true;
 
                 var steamTags = panel.Find<UILabel>("SteamTags");
                 if (steamTags != null)
@@ -1276,7 +1273,7 @@ namespace ImprovedAssetsPanel
                     steamTags.AlignTo(panel, UIAlignAnchor.TopLeft);
                     steamTags.width = panelSizeX;
                     steamTags.height = 10;
-                    steamTags.color = Color.white;
+                    steamTags.textColor = Color.white;
                     steamTags.relativePosition = new Vector3(4.0f, 24.0f);
                 }
 
@@ -1294,10 +1291,7 @@ namespace ImprovedAssetsPanel
                 delete.relativePosition = new Vector3(panelSizeX - 28.0f, 2.0f, delete.relativePosition.z);
                 delete.zOrder = 7;
 
-                var active = panel.Find<UICheckBox>("Active");
-                active.relativePosition = new Vector3(4.0f, 4.0f, active.relativePosition.z);
-                active.zOrder = 7;
-                active.tooltip = "Activate/ deactivate asset";
+
 
                 var favButton = panel.AddUIComponent<UIButton>();
                 favButton.AlignTo(panel, UIAlignAnchor.TopLeft);
@@ -1327,9 +1321,6 @@ namespace ImprovedAssetsPanel
                     SetAssetCountLabels();
                 };
 
-                var onOff = active.Find<UILabel>("OnOff");
-                onOff.enabled = false;
-
                 var view = panel.Find<UIButton>("View");
                 view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
                 view.zOrder = 7;
@@ -1346,19 +1337,27 @@ namespace ImprovedAssetsPanel
                 var styleStuff = panel.Find<UIPanel>("StyleStuff");
                 if (styleStuff != null)
                 {
+                    styleStuff.size = new Vector2(0, 0);
+                    styleStuff.AlignTo(panel, UIAlignAnchor.TopLeft);
+                    styleStuff.relativePosition = new Vector3();
+
                     var button = styleStuff.Find<UIButton>("Button");
-                    button.transform.parent = panel.transform;
                     button.zOrder = 7;
-                    button.AlignTo(panel, UIAlignAnchor.TopLeft);
+                    button.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
                     button.relativePosition = new Vector3(88.0f + view.size.x, panelSizeY - 28.0f, button.relativePosition.z);
 
                     var count = styleStuff.Find<UILabel>("StyleCount");
-                    count.transform.parent = panel.transform;
                     count.textScale = 0.7f;
-                    count.AlignTo(panel, UIAlignAnchor.TopLeft);
+                    count.zOrder = 7;
+                    count.width = panelSizeX;
+                    count.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
                     count.relativePosition = new Vector3(4.0f, 36.0f, count.relativePosition.z);
 
-                    styleStuff.size = new Vector2(0,0);
+                    var label = panel.Find<UILabel>("UILabel");
+                    if (label != null)
+                    {
+                        label.Hide();
+                    }
                 }
 
 
