@@ -396,6 +396,31 @@ namespace ImprovedAssetsPanel
                         {
                             return;
                         }
+                        var categoryContainerGameObject = GameObject.Find("CategoryContainer");
+                        if (categoryContainerGameObject == null)
+                        {
+                            return;
+                        }
+                        var categoryContainer = categoryContainerGameObject.GetComponent<UITabContainer>();
+                        if (categoryContainer == null)
+                        {
+                            return;
+                        }
+                        var mods = categoryContainer.Find("Assets");
+                        if (mods == null)
+                        {
+                            return; ;
+                        }
+                        var modsList = mods.Find("Content");
+                        if (modsList == null)
+                        {
+                            return;
+                        }
+                        var moarGroupObj = GameObject.Find("MoarGroup");
+                        if (moarGroupObj == null)
+                        {
+                            return;
+                        }
                         contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
                     }
                 }
@@ -602,11 +627,6 @@ namespace ImprovedAssetsPanel
         private static void Initialize()
         {
             var moarGroup = GameObject.Find("Assets").GetComponent<UIPanel>().Find<UIPanel>("MoarGroup");
-
-            if (moarGroup == null)
-            {
-                return;
-            }
             _searchString = "";
             var uiView = FindObjectOfType<UIView>();
 
