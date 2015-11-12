@@ -1256,6 +1256,7 @@ namespace ImprovedAssetsPanel
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
 
                 var asset = _assetCache[_displayedAssets[i]];
+                SetupAssetPackageEntry(ref packageEntry, asset);
 
                 var panel = packageEntry.gameObject.GetComponent<UIPanel>();
                 const float panelSizeX = 310.0f;
@@ -1277,14 +1278,15 @@ namespace ImprovedAssetsPanel
                 active.zOrder = 7;
                 active.tooltip = "Activate/ deactivate asset";
 
+                
                 var onOff = active.Find<UILabel>("OnOff");
-                onOff.text = asset.name;
-                onOff.size = new Vector2(panelSizeX - 24.0f, panelSizeY - 2.0f);
-
+                onOff.text = "";
+                onOff.size = new Vector2(24.0f, 24.0f);
 
                 var nameLabel = panel.Find<UILabel>("Name");
-                nameLabel.isVisible = false;
-
+                nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
+                nameLabel.relativePosition = new Vector3(2, 4);
+ 
                 var steamTags = panel.Find<UILabel>("SteamTags");
                 if (steamTags != null)
                 {
@@ -1380,8 +1382,6 @@ namespace ImprovedAssetsPanel
                     }
                 }
 
-
-                SetupAssetPackageEntry(ref packageEntry, asset);
                 var isFavorite = _config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
                 favButton.opacity = isFavorite ? 1.0f : 0.25f;
                 packageEntry.component.Show();
