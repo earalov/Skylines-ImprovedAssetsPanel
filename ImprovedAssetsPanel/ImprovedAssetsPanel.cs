@@ -8,19 +8,25 @@ using ColossalFramework.UI;
 using UnityEngine;
 using System.ComponentModel;
 using ColossalFramework;
+using ImprovedAssetsPanel.Detours;
+using ImprovedAssetsPanel.Redirection;
+using ImprovedAssetsPanel.Extensions;
 
 namespace ImprovedAssetsPanel
 {
+
     public class ImprovedAssetsPanel : MonoBehaviour
     {
+        private const string KAssetEntryTemplate = "AssetEntryTemplate";
+
         private enum SortMode
         {
             [Description("Name")]
             Alphabetical = 0,
-            [Description("Last updated")]
-            LastUpdated = 1,
-            [Description("Last subscribed")]
-            LastSubscribed = 2,
+            [Description("File updated")]
+            FileUpdated = 1,
+            [Description("File created")]
+            FileCreated = 2,
             [Description("Active")]
             Active = 3,
             [Description("Favorite")]
@@ -29,114 +35,12 @@ namespace ImprovedAssetsPanel
             Location = 5,
         }
 
-
         private enum SortOrder
         {
             [Description("Ascending")]
             Ascending = 0,
             [Description("Descending")]
             Descending = 1
-        }
-
-        private enum AssetType
-        {
-            Favorite,
-            All,
-            Unknown,
-            [Description(SteamHelper.kSteamTagBuilding)]
-            Building,
-            [Description(SteamHelper.kSteamTagResidential)]
-            Residential,
-            [Description(SteamHelper.kSteamTagResidentialLow)]
-            ResidentialLow,
-            [Description(SteamHelper.kSteamTagResidentialHigh)]
-            ResidentialHigh,
-            [Description(SteamHelper.kSteamTagCommercial)]
-            Commercial,
-            [Description(SteamHelper.kSteamTagCommercialLow)]
-            CommercialLow,
-            [Description(SteamHelper.kSteamTagCommercialHigh)]
-            CommercialHigh,
-            [Description(SteamHelper.kSteamTagIndustrial)]
-            Industrial,
-            [Description(SteamHelper.kSteamTagIndustrialGeneric)]
-            IndustrialGeneric,
-            [Description(SteamHelper.kSteamTagIndustrialOil)]
-            IndustrialOil,
-            [Description(SteamHelper.kSteamTagIndustrialOre)]
-            IndustrialOre,
-            [Description(SteamHelper.kSteamTagIndustrialForestry)]
-            IndustrialForestry,
-            [Description(SteamHelper.kSteamTagIndustrialFarming)]
-            IndustrialFarming,
-            [Description(SteamHelper.kSteamTagOffice)]
-            Office,
-            [Description(SteamHelper.kSteamTagProp)]
-            Prop,
-            [Description(SteamHelper.kSteamTagTree)]
-            Tree,
-            [Description(SteamHelper.kSteamTagIntersection)]
-            Intersection,
-            [Description(SteamHelper.kSteamTagPark)]
-            Park,
-            [Description(SteamHelper.kSteamTagElectricity)]
-            Electricity,
-            [Description(SteamHelper.kSteamTagWaterAndSewage)]
-            WaterAndSewage,
-            [Description(SteamHelper.kSteamTagGarbage)]
-            Garbage,
-            [Description(SteamHelper.kSteamTagHealthcare)]
-            Healthcare,
-            [Description(SteamHelper.kSteamTagDeathcare)]
-            Deathcare,
-            [Description(SteamHelper.kSteamTagFireDepartment)]
-            FireDepartment,
-            [Description(SteamHelper.kSteamTagPoliceDepartment)]
-            PoliceDepartment,
-            [Description(SteamHelper.kSteamTagEducation)]
-            Education,
-            [Description(SteamHelper.kSteamTagTransport)]
-            Transport,
-            [Description(SteamHelper.kSteamTagTransportBus)]
-            TransportBus,
-            [Description(SteamHelper.kSteamTagTransportMetro)]
-            TransportMetro,
-            [Description(SteamHelper.kSteamTagTransportTrain)]
-            TransportTrain,
-            [Description(SteamHelper.kSteamTagTransportShip)]
-            TransportShip,
-            [Description(SteamHelper.kSteamTagTransportPlane)]
-            TransportPlane,
-            [Description(SteamHelper.kSteamTagUniqueBuilding)]
-            UniqueBuilding,
-            [Description(SteamHelper.kSteamTagMonument)]
-            Monument,
-            [Description(SteamHelper.kSteamTagColorCorrectionLUT)]
-            ColorLut,
-            [Description(SteamHelper.kSteamTagVehicle)]
-            Vehicle
-        }
-
-        private const string ConfigPath = "ImprovedAssetsPanelConfig.xml";
-        private static Configuration _config = new Configuration();
-
-        private static void LoadConfig()
-        {
-            _config = Configuration.Deserialize(ConfigPath);
-            if (_config != null)
-            {
-                return;
-            }
-            _config = new Configuration();
-            SaveConfig();
-        }
-
-        private static void SaveConfig()
-        {
-            if (_config != null)
-            {
-                Configuration.Serialize(ConfigPath, _config);
-            }
         }
 
         private static UIPanel _buttonsPanel;
@@ -149,13 +53,6 @@ namespace ImprovedAssetsPanel
         private static SortMode _sortMode = SortMode.Alphabetical;
         private static AssetType _filterMode = AssetType.All;
         private static SortOrder _sortOrder = SortOrder.Ascending;
-
-        private const string KEntryTemplate = "EntryTemplate";
-        private const string KMapEntryTemplate = "MapEntryTemplate";
-        private const string KSaveEntryTemplate = "SaveEntryTemplate";
-        private const string KAssetEntryTemplate = "AssetEntryTemplate";
-        private const string KStyleEntryTemplate = "StyleEntryTemplate";
-
         private static List<UIButton> _assetTypeButtons = new List<UIButton>();
         private static Dictionary<AssetType, UILabel> _assetTypeLabels = new Dictionary<AssetType, UILabel>();
 
@@ -163,211 +60,29 @@ namespace ImprovedAssetsPanel
         private static UIPanel[] _assetRows;
 
         private static MultiMap<Guid, AssetType> _assetTypeIndex = new MultiMap<Guid, AssetType>();
-        private static Dictionary<Guid, Package.Asset> _assetCache = new Dictionary<Guid, Package.Asset>();
-        private static List<Guid> _displayedAssets = new List<Guid>();
+        internal static Dictionary<Guid, Package.Asset> _assetCache = new Dictionary<Guid, Package.Asset>();
+        internal static List<Guid> _displayedAssets = new List<Guid>();
 
         private static float _scrollPositionY;
         private static float _maxScrollPositionY;
-        private static string _searchString = "";
 
-        internal static object GetInstanceField(Type type, object instance, string fieldName)
+        private static string GetSpriteNameForAssetType(AssetType assetType, bool isHovered = false)
         {
-            BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
-                | BindingFlags.Static;
-            FieldInfo field = type.GetField(fieldName, bindFlags);
-            return field.GetValue(instance);
+            var attribute = assetType.GetEnumDescription<AssetType, AssetTypeAttribute>();
+            return isHovered ? attribute.SpriteName + " Hovered" : attribute.SpriteName;
         }
 
-        private class SearchPerformer
+        private static bool _uiInitialized;
+
+        public static void Initialize()
         {
-
-            public void PerformSearch(string search)
+            if (_uiInitialized)
             {
-                var contentManagerPanel = (ContentManagerPanel)Convert.ChangeType(this, typeof(ContentManagerPanel));
-                if (contentManagerPanel == null)
-                {
-                    Debug.LogWarning("Perform search: ContentManagerPanel is null!");
-                    return;
-                }
-
-                var categoriesContainer = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_CategoriesContainer") as UITabContainer);
-                if (categoriesContainer == null)
-                {
-                    Debug.LogWarning("Perform search: Categories container is null!");
-                    return;
-                }
-                var categories = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox);
-                if (categories == null)
-                {
-                    Debug.LogWarning("Perform search: Categories are null!");
-                    return;
-                }
-                var index = categories.selectedIndex;
-                var assetsList = categoriesContainer.components[index].Find("Content");
-                if (assetsList == null)
-                {
-                    Debug.LogWarning("Perform search: AssetsList is null!");
-                    return;
-                }
-                var notAssetPanel = index != 2;
-                if (notAssetPanel)
-                {
-                    foreach (var item in assetsList.components)
-                    {
-                        if (item == null)
-                        {
-                            continue;
-                        }
-                        var component = item.GetComponent<PackageEntry>();
-                        item.isVisible = component == null || component.IsMatch(search);
-                    }
-                }
-                else
-                {
-                    _searchString = search;
-                    RedrawAssets();
-                }
+                return;
             }
-
-            private void ToggleActiveCategory(bool active)
-            {
-
-                var contentManagerPanel = (ContentManagerPanel)Convert.ChangeType(this, typeof(ContentManagerPanel));
-                if (contentManagerPanel == null)
-                {
-                    Debug.LogWarning("Perform search: ContentManagerPanel is null!");
-                    return;
-                }
-                var categoriesContainer = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_CategoriesContainer") as UITabContainer);
-                if (categoriesContainer == null)
-                {
-                    Debug.LogWarning("Perform search: Categories container is null!");
-                    return;
-                }
-
-                UIComponent uiComponent1 = categoriesContainer.components[categoriesContainer.selectedIndex].Find("Content");
-                if (!((UnityEngine.Object)uiComponent1 != (UnityEngine.Object)null))
-                    return;
-                var categories = (GetInstanceField(typeof(ContentManagerPanel), contentManagerPanel, "m_Categories") as UIListBox);
-                if (categories == null)
-                {
-                    Debug.LogWarning("Perform search: Categories are null!");
-                    return;
-                }
-                var index = categories.selectedIndex;
-                var notAssetPanel = index != 2;
-                if (notAssetPanel)
-                {
-                    for (int i = 0; i < uiComponent1.components.Count; ++i)
-                    {
-                        UIComponent uiComponent2 = uiComponent1.components[i];
-                        if ((UnityEngine.Object)uiComponent2 != (UnityEngine.Object)null)
-                        {
-                            PackageEntry component = uiComponent2.GetComponent<PackageEntry>();
-                            if ((UnityEngine.Object)component != (UnityEngine.Object)null)
-                                component.entryActive = active;
-                        }
-                    }
-                }
-                else
-                {
-                    foreach (var guid in _displayedAssets)
-                    {
-                        _assetCache[guid].isEnabled = active;
-                    }
-                    RedrawAssets();
-                }
-            }
-
+            InitializeImpl();
+            _uiInitialized = true;
         }
-
-
-        private static string GetSpriteNameForAssetType(AssetType assetType, bool hovered = false)
-        {
-            switch (assetType)
-            {
-                case AssetType.Favorite:
-                    return hovered ? "InfoIconHealthHovered" : "InfoIconHealth";
-                case AssetType.Building:
-                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
-                case AssetType.Prop:
-                    return hovered ? "ToolbarIconPropsHovered" : "ToolbarIconProps";
-                case AssetType.Tree:
-                    return hovered ? "ToolbarIconBeautificationHovered" : "ToolbarIconBeautification";
-                case AssetType.Intersection:
-                    return hovered ? "ThumbnailJunctionsCloverFocused" : "ThumbnailJunctionsClover";
-                case AssetType.Park:
-                    return hovered ? "SubBarBeautificationParksnPlazasHovered" : "SubBarBeautificationParksnPlazasPressed";
-                case AssetType.Electricity:
-                    return hovered ? "InfoIconElectricityHovered" : "InfoIconElectricity";
-                case AssetType.WaterAndSewage:
-                    return hovered ? "InfoIconWaterHovered" : "InfoIconWater";
-                case AssetType.Garbage:
-                    return hovered ? "InfoIconGarbageHovered" : "InfoIconGarbage";
-                case AssetType.Healthcare:
-                    return hovered ? "ToolbarIconHealthcareHovered" : "ToolbarIconHealthcare";
-                case AssetType.Deathcare:
-                    return hovered ? "ToolbarIconHealthcareFocused" : "ToolbarIconHealthcareDisabled";
-                case AssetType.FireDepartment:
-                    return hovered ? "InfoIconFireSafetyHovered" : "InfoIconFireSafety";
-                case AssetType.PoliceDepartment:
-                    return hovered ? "ToolbarIconPoliceHovered" : "ToolbarIconPolice";
-                case AssetType.Education:
-                    return hovered ? "InfoIconEducationHovered" : "InfoIconEducation";
-                case AssetType.Transport:
-                    return hovered ? "ToolbarIconPublicTransportHovered" : "ToolbarIconPublicTransport";
-                case AssetType.TransportBus:
-                    return hovered ? "SubBarPublicTransportBusHovered" : "SubBarPublicTransportBus";
-                case AssetType.TransportMetro:
-                    return hovered ? "SubBarPublicTransportMetroHovered" : "SubBarPublicTransportMetro";
-                case AssetType.TransportTrain:
-                    return hovered ? "SubBarPublicTransportTrainHovered" : "SubBarPublicTransportTrain";
-                case AssetType.TransportShip:
-                    return hovered ? "SubBarPublicTransportShipHovered" : "SubBarPublicTransportShip";
-                case AssetType.TransportPlane:
-                    return hovered ? "SubBarPublicTransportPlaneHovered" : "SubBarPublicTransportPlane";
-                case AssetType.UniqueBuilding:
-                    return hovered ? "ToolbarIconMonumentsHovered" : "ToolbarIconMonuments";
-                case AssetType.Monument:
-                    return hovered ? "ToolbarIconWondersHowered" : "ToolbarIconWonders";
-                case AssetType.Residential:
-                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
-                case AssetType.ResidentialLow:
-                    return hovered ? "IconPolicyTaxRaiseResLowHovered" : "IconPolicyTaxRaiseResLow";
-                case AssetType.ResidentialHigh:
-                    return hovered ? "IconPolicyTaxRaiseResHighHovered" : "IconPolicyTaxRaiseResHigh";
-                case AssetType.Commercial:
-                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
-                case AssetType.CommercialLow:
-                    return hovered ? "IconPolicySmallBusinessHovered" : "IconPolicySmallBusiness";
-                case AssetType.CommercialHigh:
-                    return hovered ? "IconPolicyBigBusinessHovered" : "IconPolicyBigBusiness";
-                case AssetType.Industrial:
-                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
-                case AssetType.IndustrialGeneric:
-                    return hovered ? "IconPolicyNoneHovered" : "IconPolicyNone";
-                case AssetType.IndustrialOre:
-                    return hovered ? "IconPolicyOreHovered" : "IconPolicyOre";
-                case AssetType.IndustrialOil:
-                    return hovered ? "IconPolicyOilHovered" : "IconPolicyOil";
-                case AssetType.IndustrialFarming:
-                    return hovered ? "IconPolicyFarmingHovered" : "IconPolicyFarming";
-                case AssetType.IndustrialForestry:
-                    return hovered ? "IconPolicyForestHovered" : "IconPolicyForest";
-                case AssetType.Office:
-                    return hovered ? "InfoIconOutsideConnectionsHovered" : "InfoIconOutsideConnectionsPressed";
-                case AssetType.Vehicle:
-                    return hovered ? "InfoIconTrafficCongestionHovered" : "InfoIconTrafficCongestion";
-            }
-
-            return "";
-        }
-
-        private static RedirectCallsState _stateRefresh;
-        private static RedirectCallsState _statePerformSearch;
-        private static RedirectCallsState _stateToggleActiveCategory;
-        private static bool _ui_initialized;
-
 
         public static void Bootstrap()
         {
@@ -379,39 +94,27 @@ namespace ImprovedAssetsPanel
             syncObject = new GameObject("ImprovedAssetsPanelSyncObject");
             syncObject.AddComponent<UpdateHook>().onUnityDestroy = Revert;
             var updateHook = syncObject.AddComponent<UpdateHook>();
-            updateHook.once = false;
+            updateHook.Once = false;
             updateHook.onUnityUpdate = () =>
             {
                 if (Singleton<LoadingManager>.instance.m_loadedEnvironment == null)
                 {
-                    if (!_ui_initialized)
+                    if (!_uiInitialized)
                     {
                         var contentManagerPanelGameObject = GameObject.Find("(Library) ContentManagerPanel");
-                        if (contentManagerPanelGameObject == null)
-                        {
-                            return;
-                        }
-                        var contentManagerPanel = contentManagerPanelGameObject.GetComponent<ContentManagerPanel>();
+                        var contentManagerPanel = contentManagerPanelGameObject?.GetComponent<ContentManagerPanel>();
                         if (contentManagerPanel == null)
                         {
                             return;
                         }
                         var categoryContainerGameObject = GameObject.Find("CategoryContainer");
-                        if (categoryContainerGameObject == null)
-                        {
-                            return;
-                        }
-                        var categoryContainer = categoryContainerGameObject.GetComponent<UITabContainer>();
+                        var categoryContainer = categoryContainerGameObject?.GetComponent<UITabContainer>();
                         if (categoryContainer == null)
                         {
                             return;
                         }
                         var mods = categoryContainer.Find("Assets");
-                        if (mods == null)
-                        {
-                            return; ;
-                        }
-                        var modsList = mods.Find("Content");
+                        var modsList = mods?.Find("Content");
                         if (modsList == null)
                         {
                             return;
@@ -421,136 +124,32 @@ namespace ImprovedAssetsPanel
                         {
                             return;
                         }
-                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = Refresh;
+                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
+                        {
+                            ContentManagerPanelDetour.RefreshType(contentManagerPanel, UserAssetType.CustomAssetMetaData, categoryContainer, "", true);
+                        };
                     }
                 }
                 else
                 {
                     Destroy(syncObject);
                 }
-                updateHook.once = true;
+                updateHook.Once = true;
             };
 
             if (Singleton<LoadingManager>.instance.m_loadedEnvironment != null)
             {
                 return;
             }
-            LoadConfig();
+            Configuration.LoadConfig();
 
-            _stateRefresh = RedirectionHelper.RedirectCalls
-                (
-                    typeof (ContentManagerPanel).GetMethod("Refresh",
-                        BindingFlags.Instance | BindingFlags.NonPublic),
-                    typeof (ImprovedAssetsPanel).GetMethod("Refresh",
-                        BindingFlags.Static | BindingFlags.Public)
-                );
-
-            _statePerformSearch = RedirectionHelper.RedirectCalls
-                (
-                    typeof (ContentManagerPanel).GetMethod("PerformSearch",
-                        BindingFlags.Instance | BindingFlags.NonPublic),
-                    typeof (SearchPerformer).GetMethod("PerformSearch",
-                        BindingFlags.Instance | BindingFlags.Public)
-                );
-
-            _stateToggleActiveCategory = RedirectionHelper.RedirectCalls
-                (
-                    typeof (ContentManagerPanel).GetMethod("ToggleActiveCategory",
-                        BindingFlags.Instance | BindingFlags.NonPublic),
-                    typeof (SearchPerformer).GetMethod("ToggleActiveCategory",
-                        BindingFlags.Instance | BindingFlags.NonPublic)
-                );
-        }
-
-        public static void Refresh()
-        {
-            if (!_ui_initialized)
-            {
-                Initialize();
-                _ui_initialized = true;
-            }
-            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            RefreshAllAssets(categoryContainer);
-            RefreshPackages(categoryContainer);
-            RefreshStandardCategory(categoryContainer, "Maps", UserAssetType.MapMetaData, KMapEntryTemplate);
-            RefreshStandardCategory(categoryContainer, "Saves", UserAssetType.SaveGameMetaData, KSaveEntryTemplate);
-            RefreshStandardCategory(categoryContainer, "Styles", UserAssetType.DistrictStyleMetaData, KStyleEntryTemplate);
-            RefreshAssetsOnly();
-        }
-
-        private static void RefreshStandardCategory(UITabContainer categoryContainer, string categoryName, Package.AssetType packageAssetType, string entryTemplate)
-        {
-            UITemplateManager.ClearInstances(entryTemplate);
-            var contentPanel = categoryContainer.Find(categoryName).Find("Content");
-            foreach (var asset in PackageManager.FilterAssets(packageAssetType))
-            {
-                var packageEntry = UITemplateManager.Get<PackageEntry>(entryTemplate);
-                contentPanel.AttachUIComponent(packageEntry.gameObject);
-                SetupAssetPackageEntry(ref packageEntry, asset);
-                packageEntry.RequestDetails();
-            }
-        }
-
-        private static void RefreshPackages(UITabContainer categoryContainer)
-        {
-            var component = categoryContainer.Find("Packages").Find("Content");
-            if (!component.isEnabled)
-            {
-                return;
-            }
-            foreach (var current in PackageManager.allPackages)
-            {
-                var packageEntry = UITemplateManager.Get<PackageEntry>(KEntryTemplate);
-                component.AttachUIComponent(packageEntry.gameObject);
-                packageEntry.entryName = current.packageName;
-                packageEntry.entryActive = true;
-                packageEntry.package = current;
-            }
-        }
-
-        private static void RefreshAllAssets(UITabContainer categoryContainer)
-        {
-            UITemplateManager.ClearInstances(KEntryTemplate);
-            var component = categoryContainer.Find("AllAssets").Find("Content");
-            if (!component.isEnabled)
-            {
-                return;
-            }
-            foreach (var current in PackageManager.allPackages)
-            {
-                foreach (Package.Asset asset in current)
-                {
-                    var packageEntry = UITemplateManager.Get<PackageEntry>(KEntryTemplate);
-                    component.AttachUIComponent(packageEntry.gameObject);
-                    packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(",
-                        asset.type, ")");
-                    packageEntry.entryActive = true;
-                    packageEntry.package = current;
-                }
-            }
+            Redirector<ContentManagerPanelDetour>.Deploy();
         }
 
         public static void Revert()
         {
-            _ui_initialized = false;
-            if (_stateRefresh != null)
-            {
-                RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("Refresh",
-                        BindingFlags.Instance | BindingFlags.NonPublic), _stateRefresh);
-                _stateRefresh = null;
-            }
-            if (_statePerformSearch != null)
-            {
-                RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("PerformSearch",
-                    BindingFlags.Instance | BindingFlags.NonPublic), _statePerformSearch);
-                _statePerformSearch = null;
-            }
-            if (_stateToggleActiveCategory != null)
-            {
-                RedirectionHelper.RevertRedirect(typeof(ContentManagerPanel).GetMethod("ToggleActiveCategory",
-                    BindingFlags.Instance | BindingFlags.NonPublic), _stateToggleActiveCategory);
-                _stateToggleActiveCategory = null;
-            }
+            _uiInitialized = false;
+            Redirector<ContentManagerPanelDetour>.Revert();
 
             var categoryContainerObj = GameObject.Find("CategoryContainer");
             if (categoryContainerObj != null)
@@ -601,7 +200,6 @@ namespace ImprovedAssetsPanel
                 Destroy(_newAssetsPanel.gameObject);
                 _newAssetsPanel = null;
             }
-            _searchString = "";
             _sortMode = SortMode.Alphabetical;
             _filterMode = AssetType.All;
             _sortOrder = SortOrder.Ascending;
@@ -624,10 +222,9 @@ namespace ImprovedAssetsPanel
         }
 
 
-        private static void Initialize()
+        private static void InitializeImpl()
         {
             var moarGroup = GameObject.Find("Assets").GetComponent<UIPanel>().Find<UIPanel>("MoarGroup");
-            _searchString = "";
             var uiView = FindObjectOfType<UIView>();
 
             var moarLabel = moarGroup.Find<UILabel>("Moar");
@@ -754,18 +351,18 @@ namespace ImprovedAssetsPanel
 
             _sortOptions = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
             _sortOptions.transform.parent = moarGroup.transform;
-            _sortOptions.size = new Vector2(240.0f, 24.0f);
+            _sortOptions.size = new Vector2(200.0f, 24.0f);
 
             _sortModePanel = uiView.AddUIComponent(typeof(UIPanel)) as UIPanel;
             _sortModePanel.gameObject.name = "AssetsSortMode";
             _sortModePanel.transform.parent = _sortOptions.transform;
             _sortModePanel.name = "AssetsSortMode";
             _sortModePanel.AlignTo(_sortOptions, UIAlignAnchor.TopLeft);
-            _sortModePanel.size = new Vector2(120.0f, 24.0f);
+            _sortModePanel.size = new Vector2(100.0f, 24.0f);
             _sortModePanel.autoLayout = false;
 
-            var sortModeDropDown = InitializeDropDown<SortMode>(_sortModePanel, "SortModeDropDown");
-            sortModeDropDown.size = new Vector2(120.0f, 24.0f);
+            var sortModeDropDown = UIUtil.CreateDropDownForEnum<SortMode>(_sortModePanel, "SortModeDropDown");
+            sortModeDropDown.size = new Vector2(100.0f, 24.0f);
             sortModeDropDown.relativePosition = new Vector3(0.0f, 0.0f, 0.0f);
             sortModeDropDown.eventSelectedIndexChanged += (component, value) =>
             {
@@ -774,15 +371,15 @@ namespace ImprovedAssetsPanel
                 RedrawAssets();
                 sortModeDropDown.enabled = true;
             };
-            _sortModeLabel = InitializeLabel(uiView, _sortModePanel, "Sort by");
+            _sortModeLabel = UIUtil.CreateLabel(_sortModePanel, "Sort by");
             _sortModeLabel.relativePosition = new Vector3(0.0f, -2.0f, 0.0f);
 
 
             _sortOrderButton = _sortModePanel.AddUIComponent<UIButton>();
             _sortOrderButton.transform.parent = _sortOptions.transform;
             _sortOrderButton.AlignTo(_sortOptions, UIAlignAnchor.TopLeft);
-            _sortOrderButton.size = new Vector2(120.0f, 24.0f);
-            _sortOrderButton.text = _sortOrder.GetEnumDescription();
+            _sortOrderButton.size = new Vector2(100.0f, 24.0f);
+            _sortOrderButton.text = _sortOrder.GetEnumDescription<SortOrder, DescriptionAttribute>().Description;
             _sortOrderButton.textScale = 0.7f;
             _sortOrderButton.normalBgSprite = "ButtonMenu";
             _sortOrderButton.disabledBgSprite = "ButtonMenuDisabled";
@@ -790,7 +387,7 @@ namespace ImprovedAssetsPanel
             _sortOrderButton.focusedBgSprite = "ButtonMenu";
             _sortOrderButton.pressedBgSprite = "ButtonMenuPressed";
             _sortOrderButton.AlignTo(_sortOptions, UIAlignAnchor.TopLeft);
-            _sortOrderButton.relativePosition = new Vector3(120.0f, 0.0f);
+            _sortOrderButton.relativePosition = new Vector3(100.0f, 0.0f);
             _sortOrderButton.eventClick += (component, param) =>
             {
                 switch (_sortOrder)
@@ -802,11 +399,11 @@ namespace ImprovedAssetsPanel
                         _sortOrder = SortOrder.Ascending;
                         break;
                 }
-                _sortOrderButton.text = _sortOrder.GetEnumDescription();
+                _sortOrderButton.text = _sortOrder.GetEnumDescription<SortOrder, DescriptionAttribute>().Description;
                 RedrawAssets();
             };
 
-            _sortOrderLabel = InitializeLabel(uiView, _sortOrderButton, "Sort Order");
+            _sortOrderLabel = UIUtil.CreateLabel(_sortOrderButton, "Sort Order");
             _sortOrderLabel.relativePosition = new Vector3(0.0f, -2.0f, 0.0f);
 
 
@@ -907,7 +504,7 @@ namespace ImprovedAssetsPanel
                     return;
                 }
 
-                if (value == _scrollPositionY)
+                if (Math.Abs(value - _scrollPositionY) < 0.001f)
                 {
                     return;
                 }
@@ -929,37 +526,6 @@ namespace ImprovedAssetsPanel
             };
         }
 
-        private static UILabel InitializeLabel(UIView uiView, UIComponent parent, string labelText)
-        {
-            var label = uiView.AddUIComponent(typeof(UILabel)) as UILabel;
-            label.transform.parent = parent.transform;
-            label.text = labelText;
-            label.AlignTo(parent, UIAlignAnchor.TopLeft);
-            label.textColor = Color.white;
-            label.textScale = 0.5f;
-            return label;
-        }
-
-        private static UIDropDown InitializeDropDown<T>(UIPanel dropDownPanel, string name)
-        {
-            var dropdown = UIUtils.CreateDropDown(dropDownPanel);
-            dropdown.name = name;
-            dropdown.size = new Vector2(120.0f, 16.0f);
-            dropdown.textScale = 0.7f;
-
-            var enumValues = Enum.GetValues(typeof(T));
-            dropdown.items = new string[enumValues.Length];
-
-            var i = 0;
-            foreach (var value in enumValues)
-            {
-                dropdown.items[i] = ((T)value).GetEnumDescription();
-                i++;
-            }
-            dropdown.selectedIndex = 0;
-            return dropdown;
-        }
-
         private static void SetAssetCountLabels()
         {
 
@@ -972,7 +538,7 @@ namespace ImprovedAssetsPanel
                         label.text = _assetTypeIndex.Keys.Count().ToString();
                         continue;
                     case AssetType.Favorite:
-                        label.text = _config.favoriteAssets.Count.ToString();
+                        label.text = Configuration.Config.FavoriteAssets.Count.ToString();
                         continue;
                 }
                 var count = _assetTypeIndex.Keys.Count(asset => _assetTypeIndex[asset].Contains(assetType));
@@ -983,10 +549,7 @@ namespace ImprovedAssetsPanel
         }
 
 
-        private static int RowCount
-        {
-            get { return (int)Mathf.Ceil(_assetCache.Count / 3.0f); }
-        }
+        private static int RowCount => (int)Mathf.Ceil(_assetCache.Count / 3.0f);
 
         private static void ScrollRows(float yOffset)
         {
@@ -1106,7 +669,7 @@ namespace ImprovedAssetsPanel
                 {
                     continue;
                 }
-                if (ContainsTag(tags, assetType.GetEnumDescription()))
+                if (ContainsTag(tags, assetType.GetEnumDescription<AssetType, AssetTypeAttribute>().SteamTag))
                 {
                     _assetTypeIndex.Add(guid, assetType);
                 }
@@ -1135,24 +698,11 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        private static List<Guid> FilterAssetsByName(Dictionary<Guid, Package.Asset> assets)
+        private static List<Guid> FilterAssetsByName(Dictionary<Guid, Package.Asset> assets, string searchString)
         {
-            return assets.Where(kvp => IsMatch(kvp.Value)).Select(entry => entry.Key).ToList();
+            return assets.Where(kvp => kvp.Value.IsMatch(searchString)).Select(entry => entry.Key).ToList();
         }
 
-        private static bool IsMatch(Package.Asset asset)
-        {
-            if ((_searchString != string.Empty) && (asset.name.IndexOf(_searchString, StringComparison.InvariantCultureIgnoreCase) == -1))
-            {
-                return asset.package.packageAuthor.IndexOf(_searchString, StringComparison.InvariantCultureIgnoreCase) != -1;
-            }
-            return true;
-        }
-
-        private static bool IsFavorite(Package.Asset asset)
-        {
-            return _config.favoriteAssets.ContainsKey(asset.package.GetPublishedFileID().AsUInt64);
-        }
 
         private static void SortDisplayedAssets()
         {
@@ -1163,20 +713,20 @@ namespace ImprovedAssetsPanel
             switch (_sortMode)
             {
                 case SortMode.Alphabetical:
-                    comparerLambda = CompareNames;
+                    comparerLambda = AssetExtensions.CompareNames;
                     alphabeticalSort = true;
                     break;
-                case SortMode.LastUpdated:
-                    comparerLambda = (a, b) => GetAssetLastModifiedDelta(a).CompareTo(GetAssetLastModifiedDelta(b));
+                case SortMode.FileUpdated:
+                    comparerLambda = (a, b) => a.GetAssetLastModifiedDelta().CompareTo(b.GetAssetLastModifiedDelta());
                     break;
-                case SortMode.LastSubscribed:
-                    comparerLambda = (a, b) => GetAssetCreatedDelta(a).CompareTo(GetAssetCreatedDelta(b));
+                case SortMode.FileCreated:
+                    comparerLambda = (a, b) => a.GetAssetCreatedDelta().CompareTo(b.GetAssetCreatedDelta());
                     break;
                 case SortMode.Active:
                     comparerLambda = (a, b) => b.isEnabled.CompareTo(a.isEnabled);
                     break;
                 case SortMode.Favorite:
-                    comparerLambda = (a, b) => IsFavorite(b).CompareTo(IsFavorite(a));
+                    comparerLambda = (a, b) => b.IsFavorite().CompareTo(a.IsFavorite());
                     break;
                 case SortMode.Location:
                     comparerLambda = (a, b) =>
@@ -1207,24 +757,9 @@ namespace ImprovedAssetsPanel
             _displayedAssets.Sort(new FunctionalComparer<Guid>((a, b) =>
             {
                 var diff = (_sortOrder == SortOrder.Ascending ? comparerLambda : (arg1, arg2) => -comparerLambda(arg1, arg2))(_assetCache[a], _assetCache[b]);
-                return diff != 0 || alphabeticalSort ? diff : CompareNames(_assetCache[a], _assetCache[b]); ;
+                return diff != 0 || alphabeticalSort ? diff : _assetCache[a].CompareNames(_assetCache[b]);
 
             }));
-        }
-
-        private static int CompareNames(Package.Asset a, Package.Asset b)
-        {
-            if (a.name == null)
-            {
-                return 1;
-            }
-
-            if (b.name == null)
-            {
-                return -1;
-            }
-
-            return String.Compare(a.name, b.name, StringComparison.InvariantCultureIgnoreCase);
         }
 
         private static void DrawAssets(int virtualRow, int realRow)
@@ -1256,7 +791,7 @@ namespace ImprovedAssetsPanel
                 currentPanel.AttachUIComponent(packageEntry.gameObject);
 
                 var asset = _assetCache[_displayedAssets[i]];
-                SetupAssetPackageEntry(ref packageEntry, asset);
+                SetupAssetPackageEntry(packageEntry, asset);
 
                 var panel = packageEntry.gameObject.GetComponent<UIPanel>();
                 const float panelSizeX = 310.0f;
@@ -1278,7 +813,7 @@ namespace ImprovedAssetsPanel
                 active.zOrder = 7;
                 active.tooltip = "Activate/ deactivate asset";
 
-                
+
                 var onOff = active.Find<UILabel>("OnOff");
                 onOff.text = "";
                 onOff.size = new Vector2(24.0f, 24.0f);
@@ -1286,7 +821,7 @@ namespace ImprovedAssetsPanel
                 var nameLabel = panel.Find<UILabel>("Name");
                 nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
                 nameLabel.relativePosition = new Vector3(2, 4);
- 
+
                 var steamTags = panel.Find<UILabel>("SteamTags");
                 if (steamTags != null)
                 {
@@ -1327,18 +862,18 @@ namespace ImprovedAssetsPanel
                 favButton.tooltip = "Set/ unset favorite";
                 favButton.eventClick += (uiComponent, param) =>
                 {
-                    if (_config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
+                    if (Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
                     {
-                        _config.favoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
+                        Configuration.Config.FavoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
                         favButton.opacity = 0.25f;
                     }
                     else
                     {
-                        _config.favoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
+                        Configuration.Config.FavoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
                         favButton.opacity = 1.0f;
                     }
 
-                    SaveConfig();
+                    Configuration.SaveConfig();
                     ReIndexAssets();
                     SetAssetCountLabels();
                 };
@@ -1382,14 +917,14 @@ namespace ImprovedAssetsPanel
                     }
                 }
 
-                var isFavorite = _config.favoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
+                var isFavorite = Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
                 favButton.opacity = isFavorite ? 1.0f : 0.25f;
                 packageEntry.component.Show();
                 packageEntry.RequestDetails();
             }
         }
 
-        private static void SetupAssetPackageEntry(ref PackageEntry packageEntry, Package.Asset asset)
+        private static void SetupAssetPackageEntry(PackageEntry packageEntry, Package.Asset asset)
         {
             packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
             packageEntry.entryActive = asset.isEnabled;
@@ -1411,23 +946,30 @@ namespace ImprovedAssetsPanel
             RedrawAssets();
         }
 
-        private static void RedrawAssets()
+        internal static void RedrawAssets(string searchString = null)
         {
-            UITemplateManager.ClearInstances(KAssetEntryTemplate);
-            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            RefreshStandardCategory(categoryContainer, "ColorCorrections", UserAssetType.ColorCorrection, KAssetEntryTemplate);
+            foreach (var row in _assetRows)
+            {
+                for (int i = row.components.Count - 1; i >= 0; i--)
+                {
+                    UIComponent child = row.components[i];
+                    row.RemoveUIComponent(child);
+                    UnityEngine.Object.Destroy(child.gameObject);
+                }
+            }
+
             switch (_filterMode)
             {
                 case AssetType.All:
-                    _displayedAssets = FilterAssetsByName(_assetCache);
+                    _displayedAssets = FilterAssetsByName(_assetCache, searchString);
                     break;
                 case AssetType.Favorite:
                     _displayedAssets = FilterAssetsByName(_assetCache.Where(
-                        kvp => _config.favoriteAssets.ContainsKey(kvp.Value.package.GetPublishedFileID().AsUInt64)).ToDictionary(p => p.Key, p => p.Value));
+                        kvp => Configuration.Config.FavoriteAssets.ContainsKey(kvp.Value.package.GetPublishedFileID().AsUInt64)).ToDictionary(p => p.Key, p => p.Value), searchString);
                     break;
                 default:
                     _displayedAssets = FilterAssetsByName(_assetCache.Where(
-                        kvp => _assetTypeIndex[kvp.Key].Contains(_filterMode)).ToDictionary(p => p.Key, p => p.Value));
+                        kvp => _assetTypeIndex[kvp.Key].Contains(_filterMode)).ToDictionary(p => p.Key, p => p.Value), searchString);
                     break;
             }
             SortDisplayedAssets();
@@ -1447,30 +989,5 @@ namespace ImprovedAssetsPanel
             DrawAssets(2, 2);
             DrawAssets(3, 3);
         }
-
-        private static TimeSpan GetAssetLastModifiedDelta(Package.Asset asset)
-        {
-            try
-            {
-                return DateTime.Now - File.GetLastWriteTime(asset.package.packagePath);
-            }
-            catch (Exception)
-            {
-                return TimeSpan.FromSeconds(0);
-            }
-        }
-
-        private static TimeSpan GetAssetCreatedDelta(Package.Asset asset)
-        {
-            try
-            {
-                return DateTime.Now - File.GetCreationTime(asset.package.packagePath);
-            }
-            catch (Exception)
-            {
-                return TimeSpan.FromSeconds(0);
-            }
-        }
-
     }
 }

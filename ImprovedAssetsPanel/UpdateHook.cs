@@ -10,27 +10,24 @@ namespace ImprovedAssetsPanel
 
         public OnUnityUpdate onUnityUpdate = null;
         public OnUnityDestroy onUnityDestroy = null;
-        public bool once = true;
+        public bool Once = true;
 
         void Update()
         {
-            if (onUnityUpdate != null)
+            if (onUnityUpdate == null)
             {
-                onUnityUpdate();
-                if (once)
-                {
-                    Destroy(this);
-                }
+                return;
+            }
+            onUnityUpdate();
+            if (Once)
+            {
+                Destroy(this);
             }
         }
 
         void OnDestroy()
         {
-            if (onUnityDestroy != null)
-            {
-                onUnityDestroy();
-            }
+            onUnityDestroy?.Invoke();
         }
-
     }
 }

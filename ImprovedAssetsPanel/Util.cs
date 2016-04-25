@@ -67,22 +67,26 @@ namespace ImprovedAssetsPanel
             field.SetValue(o, value);
         }
 
-        public static string GetEnumDescription<T>(this T value)
+        public static TR GetEnumDescription<T, TR>(this T value) where TR : Attribute
         {
             if (!typeof(T).IsEnum)
             {
                 throw new ArgumentException("T must be an enumerated type");
             }
             var fi = value.GetType().GetField(value.ToString());
-            var attributes =
-         (DescriptionAttribute[])fi.GetCustomAttributes(typeof(DescriptionAttribute), false);
-
-            if (attributes != null && attributes.Length > 0)
-                return attributes[0].Description;
-
-            return value.ToString();
+            var attributes = fi.GetCustomAttributes(typeof(TR), false);
+            if (attributes.Length > 0)
+                return (TR)attributes[0];
+            throw new Exception($"No attributes of type {typeof(TR)} found for ${value}");
         }
 
+        public static object GetInstanceField(this Type type, object instance, string fieldName)
+        {
+            BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.Static;
+            FieldInfo field = type.GetField(fieldName, bindFlags);
+            return field.GetValue(instance);
+        }
     }
 
 }

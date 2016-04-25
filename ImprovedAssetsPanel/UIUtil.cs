@@ -1,9 +1,11 @@
-﻿using ColossalFramework.UI;
+﻿using System;
+using System.ComponentModel;
+using ColossalFramework.UI;
 using UnityEngine;
 
 namespace ImprovedAssetsPanel
 {
-    public static class UIUtils
+    public static class UIUtil
     {
         public static UIDropDown CreateDropDown(UIComponent parent)
         {
@@ -54,6 +56,36 @@ namespace ImprovedAssetsPanel
             });
 
             return dropDown;
+        }
+
+        public static UIDropDown CreateDropDownForEnum<T>(UIComponent parent, string name)
+        {
+            var dropdown = UIUtil.CreateDropDown(parent);
+            dropdown.name = name;
+            dropdown.size = new Vector2(120.0f, 16.0f);
+            dropdown.textScale = 0.7f;
+
+            var enumValues = Enum.GetValues(typeof(T));
+            dropdown.items = new string[enumValues.Length];
+
+            var i = 0;
+            foreach (var value in enumValues)
+            {
+                dropdown.items[i] = ((T)value).GetEnumDescription<T, DescriptionAttribute>().Description;
+                i++;
+            }
+            dropdown.selectedIndex = 0;
+            return dropdown;
+        }
+
+        public static UILabel CreateLabel(UIComponent parent, string labelText)
+        {
+            var label = parent.AddUIComponent(typeof(UILabel)) as UILabel;
+            label.text = labelText;
+            label.AlignTo(parent, UIAlignAnchor.TopLeft);
+            label.textColor = Color.white;
+            label.textScale = 0.5f;
+            return label;
         }
     }
 }

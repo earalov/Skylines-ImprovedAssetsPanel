@@ -2,23 +2,27 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Xml.Serialization;
-using ColossalFramework.Steamworks;
 
 namespace ImprovedAssetsPanel
 {
 
     public class Configuration
     {
+        [XmlIgnore]
+        private const string ConfigPath = "ImprovedAssetsPanelConfig.xml";
 
         [XmlIgnore]
-        public Dictionary<UInt64, bool> favoriteAssets = new Dictionary<UInt64, bool>();
+        internal static Configuration Config { get; private set; } = new Configuration();
 
-        public List<UInt64> _favoriteAssets = new List<UInt64>();
+        [XmlIgnore]
+        public Dictionary<ulong, bool> FavoriteAssets { get; private set; } = new Dictionary<ulong, bool>();
+
+        public List<ulong> _favoriteAssets = new List<ulong>();
 
         public void OnPreSerialize()
         {
-            _favoriteAssets = new List<UInt64>();
-            foreach (var item in favoriteAssets)
+            _favoriteAssets = new List<ulong>();
+            foreach (var item in FavoriteAssets)
             {
                 _favoriteAssets.Add(item.Key);
             }
@@ -26,12 +30,32 @@ namespace ImprovedAssetsPanel
 
         public void OnPostDeserialize()
         {
-            favoriteAssets = new Dictionary<UInt64, bool>();
+            FavoriteAssets = new Dictionary<ulong, bool>();
             foreach (var item in _favoriteAssets)
             {
-                favoriteAssets.Add(item, true);
+                FavoriteAssets.Add(item, true);
             }
         }
+
+        internal static void LoadConfig()
+        {
+            Config = Configuration.Deserialize(ConfigPath);
+            if (Config != null)
+            {
+                return;
+            }
+            Config = new Configuration();
+            SaveConfig();
+        }
+
+        internal static void SaveConfig()
+        {
+            if (Config != null)
+            {
+                Configuration.Serialize(ConfigPath, Config);
+            }
+        }
+
 
         public static void Serialize(string filename, Configuration config)
         {

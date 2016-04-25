@@ -15,11 +15,7 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        public string Description
-        {
-            get { return "Redesigned assets list panel"; }
-        }
-
+        public string Description => "Redesigned assets list panel";
     }
 
 }
