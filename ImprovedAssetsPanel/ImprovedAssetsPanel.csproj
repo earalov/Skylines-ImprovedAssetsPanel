@@ -36,6 +36,7 @@
     <Compile Include="Extensions\AssetExtensions.cs" />
     <Compile Include="AssetType.cs" />
     <Compile Include="Detours\ContentManagerPanelDetour.cs" />
+    <Compile Include="GridView.cs" />
     <Compile Include="MultiMap.cs" />
     <Compile Include="FunctionalComparer.cs" />
     <Compile Include="Configuration.cs" />

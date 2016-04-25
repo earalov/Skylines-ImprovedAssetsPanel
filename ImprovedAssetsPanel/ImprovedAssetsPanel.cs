@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using ColossalFramework.Packaging;
 using ColossalFramework.UI;
-using UnityEngine;
 using System.ComponentModel;
 using ColossalFramework;
 using ImprovedAssetsPanel.Detours;
 using ImprovedAssetsPanel.Redirection;
 using ImprovedAssetsPanel.Extensions;
+using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace ImprovedAssetsPanel
 {
 
-    public class ImprovedAssetsPanel : MonoBehaviour
+    public static class ImprovedAssetsPanel
     {
         private const string KAssetEntryTemplate = "AssetEntryTemplate";
 
@@ -56,15 +55,13 @@ namespace ImprovedAssetsPanel
         private static List<UIButton> _assetTypeButtons = new List<UIButton>();
         private static Dictionary<AssetType, UILabel> _assetTypeLabels = new Dictionary<AssetType, UILabel>();
 
-        private static UIPanel _newAssetsPanel;
-        private static UIPanel[] _assetRows;
+        private static GridView _newAssetsPanel;
+
 
         private static MultiMap<Guid, AssetType> _assetTypeIndex = new MultiMap<Guid, AssetType>();
         internal static Dictionary<Guid, Package.Asset> _assetCache = new Dictionary<Guid, Package.Asset>();
         internal static List<Guid> _displayedAssets = new List<Guid>();
 
-        private static float _scrollPositionY;
-        private static float _maxScrollPositionY;
 
         private static string GetSpriteNameForAssetType(AssetType assetType, bool isHovered = false)
         {
@@ -132,7 +129,7 @@ namespace ImprovedAssetsPanel
                 }
                 else
                 {
-                    Destroy(syncObject);
+                   Object.Destroy(syncObject);
                 }
                 updateHook.Once = true;
             };
@@ -154,12 +151,13 @@ namespace ImprovedAssetsPanel
             var categoryContainerObj = GameObject.Find("CategoryContainer");
             if (categoryContainerObj != null)
             {
-                var categoryContainer = categoryContainerObj.GetComponent<UITabContainer>();
+                var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
                 var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
+
                 var scrollbar =
-                assetsList
-                    .transform.parent.GetComponent<UIComponent>()
-                    .Find<UIScrollbar>("Scrollbar");
+                    assetsList
+                        .transform.parent.GetComponent<UIComponent>()
+                        .Find<UIScrollbar>("Scrollbar");
 
                 assetsList.verticalScrollbar = scrollbar;
                 assetsList.isVisible = true;
@@ -167,44 +165,42 @@ namespace ImprovedAssetsPanel
 
             if (_sortModePanel != null)
             {
-                Destroy(_sortModePanel.gameObject);
+                Object.Destroy(_sortModePanel.gameObject);
                 _sortModePanel = null;
             }
             if (_sortModeLabel != null)
             {
-                Destroy(_sortModeLabel.gameObject);
+                Object.Destroy(_sortModeLabel.gameObject);
                 _sortModeLabel = null;
             }
             if (_sortOrderButton != null)
             {
-                Destroy(_sortOrderButton.gameObject);
+                Object.Destroy(_sortOrderButton.gameObject);
                 _sortOrderButton = null;
             }
             if (_sortOrderLabel != null)
             {
-                Destroy(_sortOrderLabel.gameObject);
+                Object.Destroy(_sortOrderLabel.gameObject);
                 _sortOrderLabel = null;
             }
             if (_buttonsPanel != null)
             {
-                Destroy(_buttonsPanel.gameObject);
+                Object.Destroy(_buttonsPanel.gameObject);
                 _buttonsPanel = null;
             }
             if (_sortOptions != null)
             {
-                Destroy(_sortOptions.gameObject);
+                Object.Destroy(_sortOptions.gameObject);
                 _sortOptions = null;
             }
             if (_newAssetsPanel != null)
             {
-                Destroy(_newAssetsPanel.gameObject);
+                Object.Destroy(_newAssetsPanel.gameObject);
                 _newAssetsPanel = null;
             }
             _sortMode = SortMode.Alphabetical;
             _filterMode = AssetType.All;
             _sortOrder = SortOrder.Ascending;
-
-            _assetRows = null;
 
             _assetTypeIndex = new MultiMap<Guid, AssetType>();
             _assetCache = new Dictionary<Guid, Package.Asset>();
@@ -216,16 +212,15 @@ namespace ImprovedAssetsPanel
             var syncObject = GameObject.Find("ImprovedAssetsPanelSyncObject");
             if (syncObject != null)
             {
-                Destroy(syncObject);
+                Object.Destroy(syncObject);
             }
-
         }
 
 
         private static void InitializeImpl()
         {
             var moarGroup = GameObject.Find("Assets").GetComponent<UIPanel>().Find<UIPanel>("MoarGroup");
-            var uiView = FindObjectOfType<UIView>();
+            var uiView = Object.FindObjectOfType<UIView>();
 
             var moarLabel = moarGroup.Find<UILabel>("Moar");
             var moarButton = moarGroup.Find<UIButton>("Button");
@@ -410,120 +405,13 @@ namespace ImprovedAssetsPanel
             assetsList.verticalScrollbar = null;
             assetsList.isVisible = false;
 
-            _newAssetsPanel = assetsList.transform.parent.GetComponent<UIComponent>().AddUIComponent<UIPanel>();
+            _newAssetsPanel = assetsList.transform.parent.GetComponent<UIComponent>().AddUIComponent<GridView>();
             _newAssetsPanel.anchor = assetsList.anchor;
             _newAssetsPanel.size = assetsList.size;
             _newAssetsPanel.relativePosition = assetsList.relativePosition;
             _newAssetsPanel.name = "NewAssetsList";
             _newAssetsPanel.clipChildren = true;
-            _newAssetsPanel.eventMouseWheel += (component, param) =>
-            {
-                if (RowCount <= 2)
-                {
-                    return;
-                }
-
-                var originalScrollPos = _scrollPositionY;
-                _scrollPositionY -= param.wheelDelta * 80.0f;
-                _scrollPositionY = Mathf.Clamp(_scrollPositionY, 0.0f, _maxScrollPositionY - _newAssetsPanel.size.y);
-
-                ScrollRows(originalScrollPos - _scrollPositionY);
-                SwapRows();
-
-                SetScrollBar(_scrollPositionY);
-            };
-
-            var y = 0.0f;
-
-            _assetRows = new UIPanel[4];
-            for (var q = 0; q < 4; q++)
-            {
-                _assetRows[q] = _newAssetsPanel.AddUIComponent<UIPanel>();
-                _assetRows[q].name = "AssetRow" + q;
-                _assetRows[q].size = new Vector2(1200.0f, 173.0f);
-                _assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
-                y += _assetRows[q].size.y;
-            }
-
-            scrollbar.eventMouseUp += (component, param) =>
-            {
-                if (!_newAssetsPanel.isVisible)
-                {
-                    return;
-                }
-
-                if (scrollbar.value == _scrollPositionY)
-                {
-                    return;
-                }
-                if (RowCount <= 2)
-                {
-                    return;
-                }
-
-                var originalScrollPos = _scrollPositionY;
-                _scrollPositionY = scrollbar.value;
-                _scrollPositionY = Mathf.Clamp(_scrollPositionY, 0.0f, _maxScrollPositionY - _newAssetsPanel.size.y);
-
-                if (_scrollPositionY == originalScrollPos)
-                {
-                    return;
-                }
-                var viewSize = _newAssetsPanel.size.y;
-
-                var realRowIndex = (int)Mathf.Floor((_scrollPositionY / viewSize) * (viewSize / (_assetRows[0].size.y + 2.0f)));
-                var diff = _scrollPositionY - realRowIndex * (_assetRows[0].size.y + 2.0f);
-
-                var _y = 0.0f;
-                for (var q = 0; q < 4; q++)
-                {
-                    _assetRows[q].relativePosition = new Vector3(0.0f, _y, 0.0f);
-                    _y += _assetRows[q].size.y + 2.0f;
-                }
-
-                var rowsCount = (int)Mathf.Ceil(_displayedAssets.Count / 3.0f);
-
-                for (var q = 0; q < Mathf.Min(rowsCount, 4); q++)
-                {
-                    DrawAssets(q, realRowIndex + q);
-                }
-
-                ScrollRows(-diff);
-                SetScrollBar(_scrollPositionY);
-            };
-
-            scrollbar.eventValueChanged += (component, value) =>
-            {
-                if (Input.GetMouseButton(0))
-                {
-                    return;
-                }
-
-                if (!_newAssetsPanel.isVisible)
-                {
-                    return;
-                }
-
-                if (Math.Abs(value - _scrollPositionY) < 0.001f)
-                {
-                    return;
-                }
-                if (RowCount <= 2)
-                {
-                    return;
-                }
-
-                var originalScrollPos = _scrollPositionY;
-                _scrollPositionY = value;
-                _scrollPositionY = Mathf.Clamp(_scrollPositionY, 0.0f, _maxScrollPositionY - _newAssetsPanel.size.y);
-
-                var diff = Mathf.Clamp(_scrollPositionY - originalScrollPos, -(_assetRows[0].size.y + 4), _assetRows[0].size.y + 4);
-                _scrollPositionY = originalScrollPos + diff;
-                ScrollRows(-diff);
-                SwapRows();
-
-                SetScrollBar(_scrollPositionY);
-            };
+            _newAssetsPanel.Initialize(scrollbar, CreatePackageEntry, SetupPackageEntry);
         }
 
         private static void SetAssetCountLabels()
@@ -546,96 +434,6 @@ namespace ImprovedAssetsPanel
                 label.text = count.ToString();
 
             }
-        }
-
-
-        private static int RowCount => (int)Mathf.Ceil(_assetCache.Count / 3.0f);
-
-        private static void ScrollRows(float yOffset)
-        {
-            for (var i = 0; i < 4; i++)
-            {
-                var row = _assetRows[i];
-                row.relativePosition = new Vector3(row.relativePosition.x, row.relativePosition.y + yOffset, row.relativePosition.z);
-            }
-        }
-
-        private static void SwapRows()
-        {
-            if (_assetRows[0].relativePosition.y + _assetRows[0].size.y + 2.0f < 0.0f)
-            {
-                _assetRows[0].relativePosition = new Vector3(0.0f, _assetRows[3].relativePosition.y + _assetRows[3].size.y + 2.0f);
-                var firstRealRow = (int)Mathf.Floor(_scrollPositionY / (_assetRows[0].size.y + 2.0f));
-                var lastRealRow = firstRealRow + 3;
-                DrawAssets(0, lastRealRow);
-                ShiftRowsUp();
-            }
-            else if (_assetRows[0].relativePosition.y > 0.0f)
-            {
-                _assetRows[3].relativePosition = new Vector3(0.0f, _assetRows[0].relativePosition.y - _assetRows[3].size.y - 2.0f);
-                var firstRealRow = (int)Mathf.Floor(_scrollPositionY / (_assetRows[0].size.y + 2.0f));
-                DrawAssets(3, firstRealRow);
-                ShiftRowsDown();
-            }
-        }
-
-        private static void ShiftRowsUp()
-        {
-            var tmp = _assetRows[0];
-            _assetRows[0] = _assetRows[1];
-            _assetRows[1] = _assetRows[2];
-            _assetRows[2] = _assetRows[3];
-            _assetRows[3] = tmp;
-        }
-
-        private static void ShiftRowsDown()
-        {
-            var tmp = _assetRows[3];
-            _assetRows[3] = _assetRows[2];
-            _assetRows[2] = _assetRows[1];
-            _assetRows[1] = _assetRows[0];
-            _assetRows[0] = tmp;
-        }
-
-        private static void ScrollAssetsList(float value)
-        {
-            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
-
-            var scrollbar =
-                assetsList
-                    .transform.parent.GetComponent<UIComponent>()
-                    .Find<UIScrollbar>("Scrollbar");
-
-            scrollbar.value = value;
-        }
-
-        private static void SetScrollBar(float maxValue, float scrollSize, float value = 0.0f)
-        {
-            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
-
-            var scrollbar =
-                assetsList
-                    .transform.parent.GetComponent<UIComponent>()
-                    .Find<UIScrollbar>("Scrollbar");
-
-            scrollbar.maxValue = maxValue;
-            scrollbar.scrollSize = scrollSize;
-            scrollbar.value = value;
-        }
-
-        private static void SetScrollBar(float value = 0.0f)
-        {
-            var categoryContainer = GameObject.Find("CategoryContainer").GetComponent<UITabContainer>();
-            var assetsList = categoryContainer.Find("Assets").Find<UIScrollablePanel>("Content");
-
-            var scrollbar =
-                assetsList
-                    .transform.parent.GetComponent<UIComponent>()
-                    .Find<UIScrollbar>("Scrollbar");
-
-            scrollbar.value = value;
         }
 
         private static void IndexAssetType(Guid guid, Package.Asset asset)
@@ -762,166 +560,134 @@ namespace ImprovedAssetsPanel
             }));
         }
 
-        private static void DrawAssets(int virtualRow, int realRow)
+        private static UICustomControl CreatePackageEntry()
         {
-            if (virtualRow < 0 || virtualRow > 3)
+            return UITemplateManager.Get<PackageEntry>(KAssetEntryTemplate);
+        }
+
+        private static void SetupPackageEntry(UICustomControl item, int index)
+        {
+            var packageEntry = (PackageEntry) item;
+            var asset = _assetCache[_displayedAssets[index]];
+            SetupAssetPackageEntry(packageEntry, asset);
+
+            var panel = packageEntry.gameObject.GetComponent<UIPanel>();
+
+            var image = panel.Find<UITextureSprite>("Image");
+            image.size = panel.size - new Vector2(4.0f, 2.0f);
+            image.position = new Vector3(0.0f, image.position.y + 13.0f, image.position.z);
+
+
+            var active = panel.Find<UICheckBox>("Active");
+            active.relativePosition = new Vector3(4.0f, 4.0f, active.relativePosition.z);
+            active.zOrder = 7;
+            active.tooltip = "Activate/ deactivate asset";
+
+
+            var onOff = active.Find<UILabel>("OnOff");
+            onOff.text = "";
+            onOff.size = new Vector2(24.0f, 24.0f);
+
+            var nameLabel = panel.Find<UILabel>("Name");
+            nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
+            nameLabel.relativePosition = new Vector3(2, 4);
+
+            var steamTags = panel.Find<UILabel>("SteamTags");
+            if (steamTags != null)
             {
-                Debug.LogError("DrawAssets(): virtualRow < 0 || virtualRow > 3 is true");
-                return;
+                steamTags.textScale = 0.7f;
+                steamTags.zOrder = 7;
+                steamTags.AlignTo(panel, UIAlignAnchor.TopLeft);
+                steamTags.width = panel.width;
+                steamTags.height = 10;
+                steamTags.textColor = Color.white;
+                steamTags.relativePosition = new Vector3(4.0f, 24.0f);
             }
 
-            var numRows = (int)Mathf.Ceil(_displayedAssets.Count / 3.0f);
-            if (realRow > numRows - 1)
+            var lastUpdateLabel = panel.Find<UILabel>("LastUpdate");
+            if (lastUpdateLabel != null)
             {
-                return;
+                lastUpdateLabel.textScale = 0.7f;
+                lastUpdateLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
+                lastUpdateLabel.zOrder = 7;
+                lastUpdateLabel.relativePosition = new Vector3(4.0f, 60.0f);
             }
 
-            var currentPanel = _assetRows[virtualRow];
-            for (var i = 0; i < currentPanel.transform.childCount; i++)
+            var delete = panel.Find<UIButton>("Delete");
+            delete.size = new Vector2(24.0f, 24.0f);
+            delete.relativePosition = new Vector3(panel.width - 28.0f, 2.0f, delete.relativePosition.z);
+            delete.zOrder = 7;
+
+
+
+            var favButton = panel.AddUIComponent<UIButton>();
+            favButton.AlignTo(panel, UIAlignAnchor.TopLeft);
+            favButton.normalFgSprite = "InfoIconHealth";
+            favButton.hoveredFgSprite = "InfoIconHealthHovered";
+            favButton.pressedFgSprite = "InfoIconHealthPressed";
+            favButton.focusedFgSprite = "InfoIconHealth";
+            favButton.size = new Vector2(36.0f, 36.0f);
+            favButton.relativePosition = new Vector3(panel.width - 42.0f, panel.height - 62.0f);
+            favButton.zOrder = 7;
+            favButton.tooltip = "Set/ unset favorite";
+            favButton.eventClick += (uiComponent, param) =>
             {
-                Destroy(currentPanel.transform.GetChild(i).gameObject);
-            }
-
-            var assetsCount = _displayedAssets.Count;
-
-            float currentX = 0;
-            for (var i = realRow * 3; i < Mathf.Min((realRow + 1) * 3, assetsCount); i++)
-            {
-                var packageEntry = UITemplateManager.Get<PackageEntry>(KAssetEntryTemplate);
-                currentPanel.AttachUIComponent(packageEntry.gameObject);
-
-                var asset = _assetCache[_displayedAssets[i]];
-                SetupAssetPackageEntry(packageEntry, asset);
-
-                var panel = packageEntry.gameObject.GetComponent<UIPanel>();
-                const float panelSizeX = 310.0f;
-                const float panelSizeY = 173.0f;
-                panel.size = new Vector2(panelSizeX, panelSizeY);
-                panel.relativePosition = new Vector3(currentX, 0.0f);
-                panel.backgroundSprite = "";
-
-                currentX += panel.size.x;
-
-
-                var image = panel.Find<UITextureSprite>("Image");
-                image.size = panel.size - new Vector2(4.0f, 2.0f);
-                image.position = new Vector3(0.0f, image.position.y + 13.0f, image.position.z);
-
-
-                var active = panel.Find<UICheckBox>("Active");
-                active.relativePosition = new Vector3(4.0f, 4.0f, active.relativePosition.z);
-                active.zOrder = 7;
-                active.tooltip = "Activate/ deactivate asset";
-
-
-                var onOff = active.Find<UILabel>("OnOff");
-                onOff.text = "";
-                onOff.size = new Vector2(24.0f, 24.0f);
-
-                var nameLabel = panel.Find<UILabel>("Name");
-                nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
-                nameLabel.relativePosition = new Vector3(2, 4);
-
-                var steamTags = panel.Find<UILabel>("SteamTags");
-                if (steamTags != null)
+                if (Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
                 {
-                    steamTags.textScale = 0.7f;
-                    steamTags.zOrder = 7;
-                    steamTags.AlignTo(panel, UIAlignAnchor.TopLeft);
-                    steamTags.width = panelSizeX;
-                    steamTags.height = 10;
-                    steamTags.textColor = Color.white;
-                    steamTags.relativePosition = new Vector3(4.0f, 24.0f);
+                    Configuration.Config.FavoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
+                    favButton.opacity = 0.25f;
+                }
+                else
+                {
+                    Configuration.Config.FavoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
+                    favButton.opacity = 1.0f;
                 }
 
-                var lastUpdateLabel = panel.Find<UILabel>("LastUpdate");
-                if (lastUpdateLabel != null)
-                {
-                    lastUpdateLabel.textScale = 0.7f;
-                    lastUpdateLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
-                    lastUpdateLabel.zOrder = 7;
-                    lastUpdateLabel.relativePosition = new Vector3(4.0f, 60.0f);
-                }
+                Configuration.SaveConfig();
+                ReIndexAssets();
+                SetAssetCountLabels();
+            };
 
-                var delete = panel.Find<UIButton>("Delete");
-                delete.size = new Vector2(24.0f, 24.0f);
-                delete.relativePosition = new Vector3(panelSizeX - 28.0f, 2.0f, delete.relativePosition.z);
-                delete.zOrder = 7;
+            var view = panel.Find<UIButton>("View");
+            view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
+            view.zOrder = 7;
+            view.size = new Vector2(32.0f, 32.0f);
+            view.relativePosition = new Vector3(4.0f, panel.height - 34.0f, view.relativePosition.z);
 
+            var share = panel.Find<UIButton>("Share");
+            share.zOrder = 7;
+            share.AlignTo(panel, UIAlignAnchor.TopLeft);
+            share.size = new Vector2(80.0f, 24.0f);
+            share.textScale = 0.7f;
+            share.relativePosition = new Vector3(4.0f + view.size.x, panel.height - 28.0f, share.relativePosition.z);
 
+            var styleStuff = panel.Find<UIPanel>("StyleStuff");
+            if (styleStuff != null)
+            {
+                styleStuff.size = new Vector2(0, 0);
+                styleStuff.AlignTo(panel, UIAlignAnchor.TopLeft);
+                styleStuff.relativePosition = new Vector3();
 
-                var favButton = panel.AddUIComponent<UIButton>();
-                favButton.AlignTo(panel, UIAlignAnchor.TopLeft);
-                favButton.normalFgSprite = "InfoIconHealth";
-                favButton.hoveredFgSprite = "InfoIconHealthHovered";
-                favButton.pressedFgSprite = "InfoIconHealthPressed";
-                favButton.focusedFgSprite = "InfoIconHealth";
-                favButton.size = new Vector2(36.0f, 36.0f);
-                favButton.relativePosition = new Vector3(panelSizeX - 42.0f, panelSizeY - 62.0f);
-                favButton.zOrder = 7;
-                favButton.tooltip = "Set/ unset favorite";
-                favButton.eventClick += (uiComponent, param) =>
-                {
-                    if (Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
-                    {
-                        Configuration.Config.FavoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
-                        favButton.opacity = 0.25f;
-                    }
-                    else
-                    {
-                        Configuration.Config.FavoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
-                        favButton.opacity = 1.0f;
-                    }
+                var button = styleStuff.Find<UIButton>("Button");
+                button.zOrder = 7;
+                button.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
+                button.relativePosition = new Vector3(88.0f + view.size.x, panel.height - 28.0f, button.relativePosition.z);
 
-                    Configuration.SaveConfig();
-                    ReIndexAssets();
-                    SetAssetCountLabels();
-                };
+                var count = styleStuff.Find<UILabel>("StyleCount");
+                count.textScale = 0.7f;
+                count.zOrder = 7;
+                count.width = panel.width;
+                count.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
+                count.relativePosition = new Vector3(4.0f, 36.0f, count.relativePosition.z);
 
-                var view = panel.Find<UIButton>("View");
-                view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
-                view.zOrder = 7;
-                view.size = new Vector2(32.0f, 32.0f);
-                view.relativePosition = new Vector3(4.0f, panelSizeY - 34.0f, view.relativePosition.z);
-
-                var share = panel.Find<UIButton>("Share");
-                share.zOrder = 7;
-                share.AlignTo(panel, UIAlignAnchor.TopLeft);
-                share.size = new Vector2(80.0f, 24.0f);
-                share.textScale = 0.7f;
-                share.relativePosition = new Vector3(4.0f + view.size.x, panelSizeY - 28.0f, share.relativePosition.z);
-
-                var styleStuff = panel.Find<UIPanel>("StyleStuff");
-                if (styleStuff != null)
-                {
-                    styleStuff.size = new Vector2(0, 0);
-                    styleStuff.AlignTo(panel, UIAlignAnchor.TopLeft);
-                    styleStuff.relativePosition = new Vector3();
-
-                    var button = styleStuff.Find<UIButton>("Button");
-                    button.zOrder = 7;
-                    button.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
-                    button.relativePosition = new Vector3(88.0f + view.size.x, panelSizeY - 28.0f, button.relativePosition.z);
-
-                    var count = styleStuff.Find<UILabel>("StyleCount");
-                    count.textScale = 0.7f;
-                    count.zOrder = 7;
-                    count.width = panelSizeX;
-                    count.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
-                    count.relativePosition = new Vector3(4.0f, 36.0f, count.relativePosition.z);
-
-                    var label = panel.Find<UILabel>("UILabel");
-                    if (label != null)
-                    {
-                        label.Hide();
-                    }
-                }
-
-                var isFavorite = Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
-                favButton.opacity = isFavorite ? 1.0f : 0.25f;
-                packageEntry.component.Show();
-                packageEntry.RequestDetails();
+                var label = panel.Find<UILabel>("UILabel");
+                label?.Hide();
             }
+
+            var isFavorite = Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
+            favButton.opacity = isFavorite ? 1.0f : 0.25f;
+            packageEntry.component.Show();
+            packageEntry.RequestDetails();
         }
 
         private static void SetupAssetPackageEntry(PackageEntry packageEntry, Package.Asset asset)
@@ -948,15 +714,6 @@ namespace ImprovedAssetsPanel
 
         internal static void RedrawAssets(string searchString = null)
         {
-            foreach (var row in _assetRows)
-            {
-                for (int i = row.components.Count - 1; i >= 0; i--)
-                {
-                    UIComponent child = row.components[i];
-                    row.RemoveUIComponent(child);
-                    UnityEngine.Object.Destroy(child.gameObject);
-                }
-            }
 
             switch (_filterMode)
             {
@@ -974,20 +731,7 @@ namespace ImprovedAssetsPanel
             }
             SortDisplayedAssets();
 
-            ScrollAssetsList(0.0f);
-            var y = 0.0f;
-            for (var q = 0; q < 4; q++)
-            {
-                _assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
-                y += _assetRows[q].size.y + 2.0f;
-            }
-            _scrollPositionY = 0.0f;
-            _maxScrollPositionY = (Mathf.Ceil(_displayedAssets.Count / 3.0f)) * (_assetRows[0].size.y + 2.0f);
-            SetScrollBar(_maxScrollPositionY, _newAssetsPanel.size.y);
-            DrawAssets(0, 0);
-            DrawAssets(1, 1);
-            DrawAssets(2, 2);
-            DrawAssets(3, 3);
+            _newAssetsPanel.RedrawItems(_displayedAssets.Count);
         }
     }
 }

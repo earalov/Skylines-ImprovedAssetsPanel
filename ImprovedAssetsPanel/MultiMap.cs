@@ -5,8 +5,7 @@ namespace ImprovedAssetsPanel
 {
     public class MultiMap<K, V>
     {
-        readonly Dictionary<K, List<V>> _dictionary =
-        new Dictionary<K, List<V>>();
+        private readonly Dictionary<K, List<V>> _dictionary = new Dictionary<K, List<V>>();
 
         public void Add(K key, V value)
         {
@@ -22,13 +21,7 @@ namespace ImprovedAssetsPanel
             }
         }
 
-        public IEnumerable<K> Keys
-        {
-            get
-            {
-                return this._dictionary.Keys;
-            }
-        }
+        public IEnumerable<K> Keys => this._dictionary.Keys;
 
         public List<V> this[K key]
         {
