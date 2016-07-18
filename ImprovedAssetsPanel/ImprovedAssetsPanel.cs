@@ -102,6 +102,7 @@ namespace ImprovedAssetsPanel
 
             Redirector<ContentManagerPanelDetour>.Deploy();
             Redirector<PackageManagerDetour>.Deploy();
+            Redirector<PackageEntryDetour>.Deploy();
         }
 
         public static void Revert()
@@ -109,6 +110,7 @@ namespace ImprovedAssetsPanel
             _uiInitialized = false;
             Redirector<ContentManagerPanelDetour>.Revert();
             Redirector<PackageManagerDetour>.Revert();
+            Redirector<PackageEntryDetour>.Revert();
 
             var categoryContainerObj = GameObject.Find("CategoryContainer");
             if (categoryContainerObj != null)
