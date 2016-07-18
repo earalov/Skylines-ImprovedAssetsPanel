@@ -36,6 +36,10 @@ namespace ImprovedAssetsPanel.Detours
             var notAssetPanel = index != 2;
             if (notAssetPanel)
             {
+                if (assetsList.components == null)
+                {
+                    return;
+                }
                 foreach (var item in assetsList.components)
                 {
                     if (item == null)
@@ -102,7 +106,27 @@ namespace ImprovedAssetsPanel.Detours
         [RedirectMethod]
         internal static void RefreshType(ContentManagerPanel panel, Package.AssetType assetType, UIComponent container, string template, bool onlyMain)
         {
-            //begin mod
+            if (!container.parent.isVisible)
+            {
+                var goName = $"{assetType}LazyHook";
+                if (GameObject.Find(goName) != null)
+                {
+                    return;
+                }
+                var go = new GameObject(goName);
+                var lazyHook = go.AddComponent<UpdateHook>();
+                lazyHook.Once = false;
+                lazyHook.onUnityUpdate = () =>
+                {
+                    if (!container.parent.isVisible)
+                    {
+                        return;
+                    }
+                    RefreshType(panel, assetType, container, template, onlyMain);
+                    lazyHook.Once = true;
+                };
+                return;
+            }
             ImprovedAssetsPanel.Initialize();
             if (assetType == UserAssetType.CustomAssetMetaData)
             {

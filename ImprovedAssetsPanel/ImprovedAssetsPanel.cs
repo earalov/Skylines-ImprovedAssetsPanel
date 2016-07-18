@@ -87,40 +87,7 @@ namespace ImprovedAssetsPanel
             updateHook.Once = false;
             updateHook.onUnityUpdate = () =>
             {
-                if (Singleton<LoadingManager>.instance.m_loadedEnvironment == null)
-                {
-                    if (!_uiInitialized)
-                    {
-                        var contentManagerPanelGameObject = GameObject.Find("(Library) ContentManagerPanel");
-                        var contentManagerPanel = contentManagerPanelGameObject?.GetComponent<ContentManagerPanel>();
-                        if (contentManagerPanel == null)
-                        {
-                            return;
-                        }
-                        var categoryContainerGameObject = GameObject.Find("CategoryContainer");
-                        var categoryContainer = categoryContainerGameObject?.GetComponent<UITabContainer>();
-                        if (categoryContainer == null)
-                        {
-                            return;
-                        }
-                        var mods = categoryContainer.Find("Assets");
-                        var modsList = mods?.Find("Content");
-                        if (modsList == null)
-                        {
-                            return;
-                        }
-                        var moarGroupObj = GameObject.Find("MoarGroup");
-                        if (moarGroupObj == null)
-                        {
-                            return;
-                        }
-//                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
-//                        {
-//                            ContentManagerPanelDetour.RefreshType(contentManagerPanel, UserAssetType.CustomAssetMetaData, categoryContainer, "", true);
-//                        };
-                    }
-                }
-                else
+                if (Singleton<LoadingManager>.instance.m_loadedEnvironment != null)
                 {
                     Object.Destroy(syncObject);
                 }
@@ -590,7 +557,9 @@ namespace ImprovedAssetsPanel
             var nameLabel = panel.Find<UILabel>("Name");
             nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
             nameLabel.relativePosition = new Vector3(2, 4);
+            nameLabel.wordWrap = false;
             nameLabel.width = 250;
+
 
             var steamTags = panel.Find<UILabel>("SteamTags");
             if (steamTags != null)
@@ -721,8 +690,10 @@ namespace ImprovedAssetsPanel
                     break;
             }
             SortDisplayedAssets();
-
-            _newAssetsPanel.RedrawItems(_displayedAssets.Count);
+            if (_newAssetsPanel != null)
+            {
+                _newAssetsPanel.RedrawItems(_displayedAssets.Count);
+            }
         }
     }
 }
