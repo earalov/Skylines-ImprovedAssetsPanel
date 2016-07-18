@@ -1,13 +1,17 @@
-﻿using ColossalFramework.Packaging;
+﻿using System;
+using ColossalFramework.Packaging;
 using ColossalFramework.UI;
 using ImprovedAssetsPanel.Redirection;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace ImprovedAssetsPanel.Detours
 {
     [TargetType(typeof (ContentManagerPanel))]
     public class ContentManagerPanelDetour : ContentManagerPanel
     {
+        private static object redirectLock = new Object();
+
         [RedirectMethod]
         public static void PerformSearch(ContentManagerPanel contentManagerPanel, string search)
         {
@@ -102,19 +106,33 @@ namespace ImprovedAssetsPanel.Detours
         [RedirectMethod]
         internal static void RefreshType(ContentManagerPanel panel, Package.AssetType assetType, UIComponent container, string template, bool onlyMain)
         {
-            //begin mod
-            ImprovedAssetsPanel.Initialize();
-            if (assetType == UserAssetType.CustomAssetMetaData)
+            lock (redirectLock)
             {
-                ImprovedAssetsPanel.RefreshAssetsOnly();
+                //begin mod
+                ImprovedAssetsPanel.Initialize();
+                if (assetType == UserAssetType.CustomAssetMetaData)
+                {
+                    ImprovedAssetsPanel.RefreshAssetsOnly();
+                }
+                else
+                {
+                    try
+                    {
+                        Redirector<ContentManagerPanelDetour>.Revert();
+                        RefreshType(panel, assetType, container, template, onlyMain);
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
+                    finally
+                    {
+                        Redirector<ContentManagerPanelDetour>.Deploy();
+                    }
+                }
+                //end mod 
             }
-            else
-            {
-                Redirector<ContentManagerPanelDetour>.Revert();
-                RefreshType(panel, assetType, container, template, onlyMain);
-                Redirector<ContentManagerPanelDetour>.Deploy();
-            }
-            //end mod
+
         }
     }
 }

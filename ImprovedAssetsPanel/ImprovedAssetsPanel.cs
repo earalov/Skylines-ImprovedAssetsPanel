@@ -62,13 +62,6 @@ namespace ImprovedAssetsPanel
         internal static Dictionary<Guid, Package.Asset> _assetCache = new Dictionary<Guid, Package.Asset>();
         internal static List<Guid> _displayedAssets = new List<Guid>();
 
-
-        private static string GetSpriteNameForAssetType(AssetType assetType, bool isHovered = false)
-        {
-            var attribute = assetType.GetEnumDescription<AssetType, AssetTypeAttribute>();
-            return isHovered ? attribute.SpriteName + " Hovered" : attribute.SpriteName;
-        }
-
         private static bool _uiInitialized;
 
         public static void Initialize()
@@ -129,7 +122,7 @@ namespace ImprovedAssetsPanel
                 }
                 else
                 {
-                   Object.Destroy(syncObject);
+                    Object.Destroy(syncObject);
                 }
                 updateHook.Once = true;
             };
@@ -274,8 +267,8 @@ namespace ImprovedAssetsPanel
                         button.text = "N/A";
                         break;
                     default:
-                        button.normalFgSprite = GetSpriteNameForAssetType(assetType);
-                        button.hoveredFgSprite = GetSpriteNameForAssetType(assetType, true);
+                        button.normalFgSprite = assetType.GetEnumDescription<AssetType, AssetTypeAttribute>().SpriteName;
+                        button.hoveredFgSprite = $"{assetType.GetEnumDescription<AssetType, AssetTypeAttribute>().SpriteName} Hovered";
                         break;
                 }
                 button.textScale = 0.5f;
@@ -567,9 +560,13 @@ namespace ImprovedAssetsPanel
 
         private static void SetupPackageEntry(UICustomControl item, int index)
         {
-            var packageEntry = (PackageEntry) item;
+            var packageEntry = (PackageEntry)item;
             var asset = _assetCache[_displayedAssets[index]];
-            SetupAssetPackageEntry(packageEntry, asset);
+            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
+            packageEntry.entryActive = asset.isEnabled;
+            packageEntry.package = asset.package;
+            packageEntry.asset = asset;
+            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
 
             var panel = packageEntry.gameObject.GetComponent<UIPanel>();
 
@@ -688,15 +685,6 @@ namespace ImprovedAssetsPanel
             favButton.opacity = isFavorite ? 1.0f : 0.25f;
             packageEntry.component.Show();
             packageEntry.RequestDetails();
-        }
-
-        private static void SetupAssetPackageEntry(PackageEntry packageEntry, Package.Asset asset)
-        {
-            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
-            packageEntry.entryActive = asset.isEnabled;
-            packageEntry.package = asset.package;
-            packageEntry.asset = asset;
-            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
         }
 
         public static void RefreshAssetsOnly()
