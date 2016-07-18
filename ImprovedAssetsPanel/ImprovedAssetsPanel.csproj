@@ -33,6 +33,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Detours\PackageManagerDetour.cs" />
     <Compile Include="Extensions\AssetExtensions.cs" />
     <Compile Include="AssetType.cs" />
     <Compile Include="Detours\ContentManagerPanelDetour.cs" />

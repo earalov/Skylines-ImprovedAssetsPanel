@@ -134,12 +134,14 @@ namespace ImprovedAssetsPanel
             Configuration.LoadConfig();
 
             Redirector<ContentManagerPanelDetour>.Deploy();
+            Redirector<PackageManagerDetour>.Deploy();
         }
 
         public static void Revert()
         {
             _uiInitialized = false;
             Redirector<ContentManagerPanelDetour>.Revert();
+            Redirector<PackageManagerDetour>.Revert();
 
             var categoryContainerObj = GameObject.Find("CategoryContainer");
             if (categoryContainerObj != null)
