@@ -114,10 +114,10 @@ namespace ImprovedAssetsPanel
                         {
                             return;
                         }
-                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
-                        {
-                            ContentManagerPanelDetour.RefreshType(contentManagerPanel, UserAssetType.CustomAssetMetaData, categoryContainer, "", true);
-                        };
+//                        contentManagerPanelGameObject.AddComponent<UpdateHook>().onUnityUpdate = () =>
+//                        {
+//                            ContentManagerPanelDetour.RefreshType(contentManagerPanel, UserAssetType.CustomAssetMetaData, categoryContainer, "", true);
+//                        };
                     }
                 }
                 else
@@ -590,6 +590,7 @@ namespace ImprovedAssetsPanel
             var nameLabel = panel.Find<UILabel>("Name");
             nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
             nameLabel.relativePosition = new Vector3(2, 4);
+            nameLabel.width = 250;
 
             var steamTags = panel.Find<UILabel>("SteamTags");
             if (steamTags != null)

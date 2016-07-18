@@ -127,7 +127,7 @@ namespace ImprovedAssetsPanel
             {
                 _assetRows[q] = parent.AddUIComponent<UIPanel>();
                 _assetRows[q].name = "AssetRow" + q;
-                _assetRows[q].size = new Vector2(1200.0f, 173.0f);
+                _assetRows[q].size = new Vector2(937.0f, 173.0f);
                 _assetRows[q].relativePosition = new Vector3(0.0f, y, 0.0f);
                 y += _assetRows[q].size.y;
             }
