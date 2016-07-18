@@ -1,22 +1,18 @@
-﻿using System;
-using ColossalFramework.Packaging;
+﻿using ColossalFramework.Packaging;
 using ColossalFramework.UI;
 using ImprovedAssetsPanel.Redirection;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace ImprovedAssetsPanel.Detours
 {
-    [TargetType(typeof (ContentManagerPanel))]
+    [TargetType(typeof(ContentManagerPanel))]
     public class ContentManagerPanelDetour : ContentManagerPanel
     {
-        private static object redirectLock = new Object();
-
         [RedirectMethod]
         public static void PerformSearch(ContentManagerPanel contentManagerPanel, string search)
         {
             var categoriesContainer =
-                typeof (ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_CategoriesContainer") as
+                typeof(ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_CategoriesContainer") as
                     UITabContainer;
             if (categoriesContainer == null)
             {
@@ -24,7 +20,7 @@ namespace ImprovedAssetsPanel.Detours
                 return;
             }
             var categories =
-                typeof (ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_Categories") as UIListBox;
+                typeof(ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_Categories") as UIListBox;
             if (categories == null)
             {
                 Debug.LogWarning("Perform search: Categories are null!");
@@ -60,7 +56,7 @@ namespace ImprovedAssetsPanel.Detours
         private void ToggleActiveCategory(bool active)
         {
             var categoriesContainer =
-                typeof (ContentManagerPanel).GetInstanceField(this, "m_CategoriesContainer") as
+                typeof(ContentManagerPanel).GetInstanceField(this, "m_CategoriesContainer") as
                     UITabContainer;
             if (categoriesContainer == null)
             {
@@ -69,10 +65,10 @@ namespace ImprovedAssetsPanel.Detours
             }
 
             UIComponent uiComponent1 = categoriesContainer.components[categoriesContainer.selectedIndex].Find("Content");
-            if (!((UnityEngine.Object) uiComponent1 != (UnityEngine.Object) null))
+            if (!((UnityEngine.Object)uiComponent1 != (UnityEngine.Object)null))
                 return;
             var categories =
-                typeof (ContentManagerPanel).GetInstanceField(this, "m_Categories") as UIListBox;
+                typeof(ContentManagerPanel).GetInstanceField(this, "m_Categories") as UIListBox;
             if (categories == null)
             {
                 Debug.LogWarning("Perform search: Categories are null!");
@@ -85,10 +81,10 @@ namespace ImprovedAssetsPanel.Detours
                 for (int i = 0; i < uiComponent1.components.Count; ++i)
                 {
                     UIComponent uiComponent2 = uiComponent1.components[i];
-                    if ((UnityEngine.Object) uiComponent2 != (UnityEngine.Object) null)
+                    if ((UnityEngine.Object)uiComponent2 != (UnityEngine.Object)null)
                     {
                         PackageEntry component = uiComponent2.GetComponent<PackageEntry>();
-                        if ((UnityEngine.Object) component != (UnityEngine.Object) null)
+                        if ((UnityEngine.Object)component != (UnityEngine.Object)null)
                             component.entryActive = active;
                     }
                 }
@@ -106,33 +102,54 @@ namespace ImprovedAssetsPanel.Detours
         [RedirectMethod]
         internal static void RefreshType(ContentManagerPanel panel, Package.AssetType assetType, UIComponent container, string template, bool onlyMain)
         {
-            lock (redirectLock)
+            //begin mod
+            ImprovedAssetsPanel.Initialize();
+            if (assetType == UserAssetType.CustomAssetMetaData)
             {
-                //begin mod
-                ImprovedAssetsPanel.Initialize();
-                if (assetType == UserAssetType.CustomAssetMetaData)
-                {
-                    ImprovedAssetsPanel.RefreshAssetsOnly();
-                }
-                else
-                {
-                    try
-                    {
-                        Redirector<ContentManagerPanelDetour>.Revert();
-                        RefreshType(panel, assetType, container, template, onlyMain);
-                    }
-                    catch (Exception)
-                    {
-                        // ignored
-                    }
-                    finally
-                    {
-                        Redirector<ContentManagerPanelDetour>.Deploy();
-                    }
-                }
-                //end mod 
+                ImprovedAssetsPanel.RefreshAssetsOnly();
             }
-
+            else
+            {
+                //end mod
+                int index = 0;
+                Package.AssetType[] assetTypeArray = new Package.AssetType[1]
+                {
+                        assetType
+                };
+                foreach (Package.Asset filterAsset in PackageManager.FilterAssets(assetTypeArray))
+                {
+                    if (!onlyMain || filterAsset.isMainAsset)
+                    {
+                        PackageEntry component;
+                        if (index >= container.components.Count)
+                        {
+                            component = UITemplateManager.Get<PackageEntry>(template);
+                            container.AttachUIComponent(component.gameObject);
+                        }
+                        else
+                        {
+                            component = container.components[index].GetComponent<PackageEntry>();
+                            component.Reset();
+                        }
+                        component.entryActive = filterAsset.isEnabled;
+                        component.package = filterAsset.package;
+                        component.asset = filterAsset;
+                        component.entryName = filterAsset.package.packageName + "." + filterAsset.name + "\t(" + (object)filterAsset.type + ")";
+                        component.publishedFileId = filterAsset.package.GetPublishedFileID();
+                        component.RequestDetails();
+                        ++index;
+                    }
+                }
+                while (container.components.Count > index)
+                {
+                    UIComponent child = container.components[index];
+                    container.RemoveUIComponent(child);
+                    UnityEngine.Object.Destroy((UnityEngine.Object)child.gameObject);
+                }
+                //begin mod
+            }
+            //end mod 
         }
+
     }
 }
