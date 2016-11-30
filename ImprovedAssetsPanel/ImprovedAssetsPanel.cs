@@ -531,134 +531,134 @@ namespace ImprovedAssetsPanel
 
         private static void SetupPackageEntry(UICustomControl item, int index)
         {
-            var packageEntry = (PackageEntry)item;
-            var asset = _assetCache[_displayedAssets[index]];
-            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
-            packageEntry.entryActive = asset.isEnabled;
-            packageEntry.package = asset.package;
-            packageEntry.asset = asset;
-            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
-
-            var panel = packageEntry.gameObject.GetComponent<UIPanel>();
-
-            var image = panel.Find<UITextureSprite>("Image");
-            image.size = panel.size - new Vector2(4.0f, 2.0f);
-            image.position = new Vector3(0.0f, image.position.y + 13.0f, image.position.z);
-
-
-            var active = panel.Find<UICheckBox>("Active");
-            active.relativePosition = new Vector3(4.0f, 4.0f, active.relativePosition.z);
-            active.zOrder = 7;
-            active.tooltip = "Activate/ deactivate asset";
-
-
-            var onOff = active.Find<UILabel>("OnOff");
-            onOff.text = "";
-            onOff.size = new Vector2(24.0f, 24.0f);
-
-            var nameLabel = panel.Find<UILabel>("Name");
-            nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
-            nameLabel.relativePosition = new Vector3(2, 4);
-            nameLabel.wordWrap = false;
-            nameLabel.width = 250;
-
-
-            var steamTags = panel.Find<UILabel>("SteamTags");
-            if (steamTags != null)
-            {
-                steamTags.textScale = 0.7f;
-                steamTags.zOrder = 7;
-                steamTags.AlignTo(panel, UIAlignAnchor.TopLeft);
-                steamTags.width = panel.width;
-                steamTags.height = 10;
-                steamTags.textColor = Color.white;
-                steamTags.relativePosition = new Vector3(4.0f, 24.0f);
-            }
-
-            var lastUpdateLabel = panel.Find<UILabel>("LastUpdate");
-            if (lastUpdateLabel != null)
-            {
-                lastUpdateLabel.textScale = 0.7f;
-                lastUpdateLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
-                lastUpdateLabel.zOrder = 7;
-                lastUpdateLabel.relativePosition = new Vector3(4.0f, 60.0f);
-            }
-
-            var delete = panel.Find<UIButton>("Delete");
-            delete.size = new Vector2(24.0f, 24.0f);
-            delete.relativePosition = new Vector3(panel.width - 28.0f, 2.0f, delete.relativePosition.z);
-            delete.zOrder = 7;
-
-
-
-            var favButton = panel.AddUIComponent<UIButton>();
-            favButton.AlignTo(panel, UIAlignAnchor.TopLeft);
-            favButton.normalFgSprite = "InfoIconHealth";
-            favButton.hoveredFgSprite = "InfoIconHealthHovered";
-            favButton.pressedFgSprite = "InfoIconHealthPressed";
-            favButton.focusedFgSprite = "InfoIconHealth";
-            favButton.size = new Vector2(36.0f, 36.0f);
-            favButton.relativePosition = new Vector3(panel.width - 42.0f, panel.height - 62.0f);
-            favButton.zOrder = 7;
-            favButton.tooltip = "Set/ unset favorite";
-            favButton.eventClick += (uiComponent, param) =>
-            {
-                if (Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
-                {
-                    Configuration.Config.FavoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
-                    favButton.opacity = 0.25f;
-                }
-                else
-                {
-                    Configuration.Config.FavoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
-                    favButton.opacity = 1.0f;
-                }
-
-                Configuration.SaveConfig();
-                ReIndexAssets();
-                SetAssetCountLabels();
-            };
-
-            var view = panel.Find<UIButton>("View");
-            view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
-            view.zOrder = 7;
-            view.size = new Vector2(32.0f, 32.0f);
-            view.relativePosition = new Vector3(4.0f, panel.height - 34.0f, view.relativePosition.z);
-
-            var share = panel.Find<UIButton>("Share");
-            share.zOrder = 7;
-            share.AlignTo(panel, UIAlignAnchor.TopLeft);
-            share.size = new Vector2(80.0f, 24.0f);
-            share.textScale = 0.7f;
-            share.relativePosition = new Vector3(4.0f + view.size.x, panel.height - 28.0f, share.relativePosition.z);
-
-            var styleStuff = panel.Find<UIPanel>("StyleStuff");
-            if (styleStuff != null)
-            {
-                styleStuff.size = new Vector2(0, 0);
-                styleStuff.AlignTo(panel, UIAlignAnchor.TopLeft);
-                styleStuff.relativePosition = new Vector3();
-
-                var button = styleStuff.Find<UIButton>("Button");
-                button.zOrder = 7;
-                button.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
-                button.relativePosition = new Vector3(88.0f + view.size.x, panel.height - 28.0f, button.relativePosition.z);
-
-                var count = styleStuff.Find<UILabel>("StyleCount");
-                count.textScale = 0.7f;
-                count.zOrder = 7;
-                count.width = panel.width;
-                count.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
-                count.relativePosition = new Vector3(4.0f, 36.0f, count.relativePosition.z);
-
-                var label = panel.Find<UILabel>("UILabel");
-                label?.Hide();
-            }
-
-            var isFavorite = Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
-            favButton.opacity = isFavorite ? 1.0f : 0.25f;
-            packageEntry.component.Show();
-            packageEntry.RequestDetails();
+//            var packageEntry = (PackageEntry)item;
+//            var asset = _assetCache[_displayedAssets[index]];
+//            packageEntry.entryName = string.Concat(asset.package.packageName, ".", asset.name, "\t(", asset.type, ")");
+//            packageEntry.entryActive = asset.isEnabled;
+//            packageEntry.package = asset.package;
+//            packageEntry.asset = asset;
+//            packageEntry.publishedFileId = asset.package.GetPublishedFileID();
+//
+//            var panel = packageEntry.gameObject.GetComponent<UIPanel>();
+//
+//            var image = panel.Find<UITextureSprite>("Image");
+//            image.size = panel.size - new Vector2(4.0f, 2.0f);
+//            image.position = new Vector3(0.0f, image.position.y + 13.0f, image.position.z);
+//
+//
+//            var active = panel.Find<UICheckBox>("Active");
+//            active.relativePosition = new Vector3(4.0f, 4.0f, active.relativePosition.z);
+//            active.zOrder = 7;
+//            active.tooltip = "Activate/ deactivate asset";
+//
+//
+//            var onOff = active.Find<UILabel>("OnOff");
+//            onOff.text = "";
+//            onOff.size = new Vector2(24.0f, 24.0f);
+//
+//            var nameLabel = panel.Find<UILabel>("Name");
+//            nameLabel.AlignTo(onOff, UIAlignAnchor.TopRight);
+//            nameLabel.relativePosition = new Vector3(2, 4);
+//            nameLabel.wordWrap = false;
+//            nameLabel.width = 250;
+//
+//
+//            var steamTags = panel.Find<UILabel>("SteamTags");
+//            if (steamTags != null)
+//            {
+//                steamTags.textScale = 0.7f;
+//                steamTags.zOrder = 7;
+//                steamTags.AlignTo(panel, UIAlignAnchor.TopLeft);
+//                steamTags.width = panel.width;
+//                steamTags.height = 10;
+//                steamTags.textColor = Color.white;
+//                steamTags.relativePosition = new Vector3(4.0f, 24.0f);
+//            }
+//
+//            var lastUpdateLabel = panel.Find<UILabel>("LastUpdate");
+//            if (lastUpdateLabel != null)
+//            {
+//                lastUpdateLabel.textScale = 0.7f;
+//                lastUpdateLabel.AlignTo(panel, UIAlignAnchor.TopLeft);
+//                lastUpdateLabel.zOrder = 7;
+//                lastUpdateLabel.relativePosition = new Vector3(4.0f, 60.0f);
+//            }
+//
+//            var delete = panel.Find<UIButton>("Delete");
+//            delete.size = new Vector2(24.0f, 24.0f);
+//            delete.relativePosition = new Vector3(panel.width - 28.0f, 2.0f, delete.relativePosition.z);
+//            delete.zOrder = 7;
+//
+//
+//
+//            var favButton = panel.AddUIComponent<UIButton>();
+//            favButton.AlignTo(panel, UIAlignAnchor.TopLeft);
+//            favButton.normalFgSprite = "InfoIconHealth";
+//            favButton.hoveredFgSprite = "InfoIconHealthHovered";
+//            favButton.pressedFgSprite = "InfoIconHealthPressed";
+//            favButton.focusedFgSprite = "InfoIconHealth";
+//            favButton.size = new Vector2(36.0f, 36.0f);
+//            favButton.relativePosition = new Vector3(panel.width - 42.0f, panel.height - 62.0f);
+//            favButton.zOrder = 7;
+//            favButton.tooltip = "Set/ unset favorite";
+//            favButton.eventClick += (uiComponent, param) =>
+//            {
+//                if (Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64))
+//                {
+//                    Configuration.Config.FavoriteAssets.Remove(packageEntry.publishedFileId.AsUInt64);
+//                    favButton.opacity = 0.25f;
+//                }
+//                else
+//                {
+//                    Configuration.Config.FavoriteAssets.Add(packageEntry.publishedFileId.AsUInt64, true);
+//                    favButton.opacity = 1.0f;
+//                }
+//
+//                Configuration.SaveConfig();
+//                ReIndexAssets();
+//                SetAssetCountLabels();
+//            };
+//
+//            var view = panel.Find<UIButton>("View");
+//            view.anchor = UIAnchorStyle.Top | UIAnchorStyle.Left;
+//            view.zOrder = 7;
+//            view.size = new Vector2(32.0f, 32.0f);
+//            view.relativePosition = new Vector3(4.0f, panel.height - 34.0f, view.relativePosition.z);
+//
+//            var share = panel.Find<UIButton>("Share");
+//            share.zOrder = 7;
+//            share.AlignTo(panel, UIAlignAnchor.TopLeft);
+//            share.size = new Vector2(80.0f, 24.0f);
+//            share.textScale = 0.7f;
+//            share.relativePosition = new Vector3(4.0f + view.size.x, panel.height - 28.0f, share.relativePosition.z);
+//
+//            var styleStuff = panel.Find<UIPanel>("StyleStuff");
+//            if (styleStuff != null)
+//            {
+//                styleStuff.size = new Vector2(0, 0);
+//                styleStuff.AlignTo(panel, UIAlignAnchor.TopLeft);
+//                styleStuff.relativePosition = new Vector3();
+//
+//                var button = styleStuff.Find<UIButton>("Button");
+//                button.zOrder = 7;
+//                button.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
+//                button.relativePosition = new Vector3(88.0f + view.size.x, panel.height - 28.0f, button.relativePosition.z);
+//
+//                var count = styleStuff.Find<UILabel>("StyleCount");
+//                count.textScale = 0.7f;
+//                count.zOrder = 7;
+//                count.width = panel.width;
+//                count.AlignTo(styleStuff, UIAlignAnchor.TopLeft);
+//                count.relativePosition = new Vector3(4.0f, 36.0f, count.relativePosition.z);
+//
+//                var label = panel.Find<UILabel>("UILabel");
+//                label?.Hide();
+//            }
+//
+//            var isFavorite = Configuration.Config.FavoriteAssets.ContainsKey(packageEntry.publishedFileId.AsUInt64);
+//            favButton.opacity = isFavorite ? 1.0f : 0.25f;
+//            packageEntry.component.Show();
+//            packageEntry.RequestDetails();
         }
 
         public static void RefreshAssetsOnly()

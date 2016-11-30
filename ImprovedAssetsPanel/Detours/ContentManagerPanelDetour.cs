@@ -11,49 +11,49 @@ namespace ImprovedAssetsPanel.Detours
         [RedirectMethod]
         public static void PerformSearch(ContentManagerPanel contentManagerPanel, string search)
         {
-            var categoriesContainer =
-                typeof(ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_CategoriesContainer") as
-                    UITabContainer;
-            if (categoriesContainer == null)
-            {
-                Debug.LogWarning("Perform search: Categories container is null!");
-                return;
-            }
-            var categories =
-                typeof(ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_Categories") as UIListBox;
-            if (categories == null)
-            {
-                Debug.LogWarning("Perform search: Categories are null!");
-                return;
-            }
-            var index = categories.selectedIndex;
-            var assetsList = categoriesContainer.components[index].Find("Content");
-            if (assetsList == null)
-            {
-                Debug.LogWarning("Perform search: AssetsList is null!");
-                return;
-            }
-            var notAssetPanel = index != 2;
-            if (notAssetPanel)
-            {
-                if (assetsList.components == null)
-                {
-                    return;
-                }
-                foreach (var item in assetsList.components)
-                {
-                    if (item == null)
-                    {
-                        continue;
-                    }
-                    var component = item.GetComponent<PackageEntry>();
-                    item.isVisible = component == null || component.IsMatch(search);
-                }
-            }
-            else
-            {
-                ImprovedAssetsPanel.RedrawAssets(search);
-            }
+//            var categoriesContainer =
+//                typeof(ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_CategoriesContainer") as
+//                    UITabContainer;
+//            if (categoriesContainer == null)
+//            {
+//                Debug.LogWarning("Perform search: Categories container is null!");
+//                return;
+//            }
+//            var categories =
+//                typeof(ContentManagerPanel).GetInstanceField(contentManagerPanel, "m_Categories") as UIListBox;
+//            if (categories == null)
+//            {
+//                Debug.LogWarning("Perform search: Categories are null!");
+//                return;
+//            }
+//            var index = categories.selectedIndex;
+//            var assetsList = categoriesContainer.components[index].Find("Content");
+//            if (assetsList == null)
+//            {
+//                Debug.LogWarning("Perform search: AssetsList is null!");
+//                return;
+//            }
+//            var notAssetPanel = index != 2;
+//            if (notAssetPanel)
+//            {
+//                if (assetsList.components == null)
+//                {
+//                    return;
+//                }
+//                foreach (var item in assetsList.components)
+//                {
+//                    if (item == null)
+//                    {
+//                        continue;
+//                    }
+//                    var component = item.GetComponent<PackageEntry>();
+//                    item.isVisible = component == null || component.IsMatch(search);
+//                }
+//            }
+//            else
+//            {
+//                ImprovedAssetsPanel.RedrawAssets(search);
+//            }
         }
 
         [RedirectMethod]
@@ -106,73 +106,73 @@ namespace ImprovedAssetsPanel.Detours
         [RedirectMethod]
         internal static void RefreshType(ContentManagerPanel panel, Package.AssetType assetType, UIComponent container, string template, bool onlyMain)
         {
-            if (!container.parent.isVisible)
-            {
-                var goName = $"{assetType}LazyHook";
-                if (GameObject.Find(goName) != null)
-                {
-                    return;
-                }
-                var go = new GameObject(goName);
-                var lazyHook = go.AddComponent<UpdateHook>();
-                lazyHook.Once = false;
-                lazyHook.onUnityUpdate = () =>
-                {
-                    if (!container.parent.isVisible)
-                    {
-                        return;
-                    }
-                    RefreshType(panel, assetType, container, template, onlyMain);
-                    lazyHook.Once = true;
-                };
-                return;
-            }
-            ImprovedAssetsPanel.Initialize();
-            if (assetType == UserAssetType.CustomAssetMetaData)
-            {
-                ImprovedAssetsPanel.RefreshAssetsOnly();
-            }
-            else
-            {
-                //end mod
-                int index = 0;
-                Package.AssetType[] assetTypeArray = new Package.AssetType[1]
-                {
-                        assetType
-                };
-                foreach (Package.Asset filterAsset in PackageManager.FilterAssets(assetTypeArray))
-                {
-                    if (!onlyMain || filterAsset.isMainAsset)
-                    {
-                        PackageEntry component;
-                        if (index >= container.components.Count)
-                        {
-                            component = UITemplateManager.Get<PackageEntry>(template);
-                            container.AttachUIComponent(component.gameObject);
-                        }
-                        else
-                        {
-                            component = container.components[index].GetComponent<PackageEntry>();
-                            component.Reset();
-                        }
-                        component.entryActive = filterAsset.isEnabled;
-                        component.package = filterAsset.package;
-                        component.asset = filterAsset;
-                        component.entryName = filterAsset.package.packageName + "." + filterAsset.name + "\t(" + (object)filterAsset.type + ")";
-                        component.publishedFileId = filterAsset.package.GetPublishedFileID();
-                        component.RequestDetails();
-                        ++index;
-                    }
-                }
-                while (container.components.Count > index)
-                {
-                    UIComponent child = container.components[index];
-                    container.RemoveUIComponent(child);
-                    UnityEngine.Object.Destroy((UnityEngine.Object)child.gameObject);
-                }
-                //begin mod
-            }
-            //end mod 
+//            if (!container.parent.isVisible)
+//            {
+//                var goName = $"{assetType}LazyHook";
+//                if (GameObject.Find(goName) != null)
+//                {
+//                    return;
+//                }
+//                var go = new GameObject(goName);
+//                var lazyHook = go.AddComponent<UpdateHook>();
+//                lazyHook.Once = false;
+//                lazyHook.onUnityUpdate = () =>
+//                {
+//                    if (!container.parent.isVisible)
+//                    {
+//                        return;
+//                    }
+//                    RefreshType(panel, assetType, container, template, onlyMain);
+//                    lazyHook.Once = true;
+//                };
+//                return;
+//            }
+//            ImprovedAssetsPanel.Initialize();
+//            if (assetType == UserAssetType.CustomAssetMetaData)
+//            {
+//                ImprovedAssetsPanel.RefreshAssetsOnly();
+//            }
+//            else
+//            {
+//                //end mod
+//                int index = 0;
+//                Package.AssetType[] assetTypeArray = new Package.AssetType[1]
+//                {
+//                        assetType
+//                };
+//                foreach (Package.Asset filterAsset in PackageManager.FilterAssets(assetTypeArray))
+//                {
+//                    if (!onlyMain || filterAsset.isMainAsset)
+//                    {
+//                        PackageEntry component;
+//                        if (index >= container.components.Count)
+//                        {
+//                            component = UITemplateManager.Get<PackageEntry>(template);
+//                            container.AttachUIComponent(component.gameObject);
+//                        }
+//                        else
+//                        {
+//                            component = container.components[index].GetComponent<PackageEntry>();
+//                            component.Reset();
+//                        }
+//                        component.entryActive = filterAsset.isEnabled;
+//                        component.package = filterAsset.package;
+//                        component.asset = filterAsset;
+//                        component.entryName = filterAsset.package.packageName + "." + filterAsset.name + "\t(" + (object)filterAsset.type + ")";
+//                        component.publishedFileId = filterAsset.package.GetPublishedFileID();
+//                        component.RequestDetails();
+//                        ++index;
+//                    }
+//                }
+//                while (container.components.Count > index)
+//                {
+//                    UIComponent child = container.components[index];
+//                    container.RemoveUIComponent(child);
+//                    UnityEngine.Object.Destroy((UnityEngine.Object)child.gameObject);
+//                }
+//                //begin mod
+//            }
+//            //end mod 
         }
 
     }

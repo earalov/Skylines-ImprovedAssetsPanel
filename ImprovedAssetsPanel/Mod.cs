@@ -10,7 +10,7 @@ namespace ImprovedAssetsPanel
         {
             get
             {
-                ImprovedAssetsPanel.Bootstrap();
+//                ImprovedAssetsPanel.Bootstrap();
                 return "ImprovedAssetsPanel";
             }
         }
